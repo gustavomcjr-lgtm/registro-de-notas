@@ -3,79 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notas Registradas - Nuvem Firebase</title>
+    <title>Notas Recebidas Almoxarifado - ELOSCIENTIFIC</title>
     <!-- Importando o SDK do Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <style>
         :root {
-            --primary-color: #1e3a8a;
-            --secondary-color: #3b82f6;
+            --primary-color: #0f172a;
+            --secondary-color: #2563eb;
+            --accent-color: #3b82f6;
             --bg-color: #f8fafc;
+            --card-bg: #ffffff;
             --text-color: #1e293b;
-            --editable-bg: #fff9c4;
-            --editable-border: #fbc02d;
+            --border-color: #e2e8f0;
+            --editable-bg: #fefce8;
+            --editable-border: #facc15;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 20px;
+            padding: 25px;
         }
 
         .container {
-            max-width: 1300px;
+            max-width: 1500px;
             margin: 0 auto;
-            background: #ffffff;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+            border: 1px solid var(--border-color);
         }
 
         h1 {
             color: var(--primary-color);
-            margin-bottom: 20px;
-            font-size: 24px;
+            margin: 0 0 5px 0;
+            font-size: 26px;
+            font-weight: 700;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
 
         #statusNuvem {
-            font-size: 13px;
-            padding: 5px 10px;
-            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 20px;
             background: #e2e8f0;
             color: #475569;
             display: inline-block;
-            margin-bottom: 15px;
+            margin-bottom: 22px;
+            letter-spacing: 0.3px;
         }
 
+        /* Sistema de Abas */
         .tabs {
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 10px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 12px;
+            overflow-x: auto;
         }
 
         .tab-btn {
-            background-color: #e2e8f0;
-            color: #475569;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
+            background-color: #f1f5f9;
+            color: #64748b;
+            border: 1px solid var(--border-color);
+            padding: 11px 20px;
+            border-radius: 10px;
             cursor: pointer;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 600;
-            transition: background-color 0.2s, color 0.2s;
+            transition: all 0.25s ease;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            background-color: #e2e8f0;
+            color: var(--primary-color);
         }
 
         .tab-btn.active {
-            background-color: var(--primary-color);
+            background-color: var(--secondary-color);
             color: white;
+            border-color: var(--secondary-color);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
         }
 
         .tab-content {
@@ -86,83 +103,78 @@
             display: block;
         }
 
-        .dashboard {
+        /* Dashboard de Cards */
+        .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 20px;
-            margin-top: 10px;
+            margin-top: 15px;
+            margin-bottom: 25px;
         }
 
         .card {
-            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 5px solid var(--secondary-color);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+            background: linear-gradient(135deg, #ffffff, #f8fafc);
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            border-left: 6px solid var(--secondary-color);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
         }
+
+        .card.success { border-left-color: #10b981; }
+        .card.purple { border-left-color: #8b5cf6; }
 
         .card h3 {
             margin: 0;
-            font-size: 15px;
+            font-size: 13px;
+            font-weight: 600;
             color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .card p {
-            margin: 10px 0 0 0;
-            font-size: 26px;
-            font-weight: bold;
+            margin: 12px 0 0 0;
+            font-size: 28px;
+            font-weight: 700;
             color: var(--primary-color);
         }
 
-        .toolbar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-bottom: 20px;
-            justify-content: space-between;
-            align-items: center;
+        /* Toolbar e Filtros */
+        .toolbar, .filter-row, .report-box {
             background: #f8fafc;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-        }
-
-        .toolbar-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
+            padding: 18px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
             margin-bottom: 20px;
-            background: #f1f5f9;
-            padding: 15px;
-            border-radius: 8px;
-            align-items: center;
         }
+
+        .filter-row { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 14px; 
+            align-items: center; 
+        }
+
+        .report-box { max-width: 1000px; }
 
         button {
             background-color: var(--secondary-color);
             color: white;
             border: none;
-            padding: 9px 16px;
-            border-radius: 6px;
+            padding: 10px 18px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            transition: background-color 0.2s, transform 0.1s;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
         }
 
-        button:hover {
-            background-color: #2563eb;
-        }
+        button:hover { background-color: #1d4ed8; transform: translateY(-1px); }
 
         .btn-success { background-color: #10b981; }
         .btn-success:hover { background-color: #059669; }
@@ -173,157 +185,291 @@
         .btn-warning { background-color: #f59e0b; color: white; }
         .btn-warning:hover { background-color: #d97706; }
 
-        select, input[type="date"], input[type="text"], input[type="month"] {
-            padding: 8px 12px;
+        .btn-purple { background-color: #8b5cf6; color: white; }
+        .btn-purple:hover { background-color: #7c3aed; }
+
+        select, input[type="date"], input[type="text"], input[type="month"], textarea {
+            padding: 10px 14px;
             border: 1px solid #cbd5e1;
-            border-radius: 6px;
+            border-radius: 8px;
             font-size: 14px;
             outline: none;
             background: white;
+            color: var(--text-color);
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
 
-        input[type="text"] {
-            min-width: 180px;
+        select:focus, input:focus, textarea:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
         }
 
-        .report-box {
-            background: #f8fafc;
-            border: 1px solid #cbd5e1;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            max-width: 500px;
-        }
+        input[type="text"] { min-width: 170px; }
 
+        /* Tabelas */
         .table-responsive {
             overflow-x: auto;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            background: white;
-        }
+        table { width: 100%; border-collapse: collapse; text-align: left; background: white; }
 
         th {
             background-color: var(--primary-color);
             color: white;
-            padding: 12px 10px;
-            font-size: 13px;
+            padding: 14px 12px;
+            font-size: 12px;
+            font-weight: 600;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         td {
-            padding: 10px;
-            border-bottom: 1px solid #e2e8f0;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
             font-size: 14px;
+            color: var(--text-color);
+            vertical-align: middle;
         }
 
-        tr:hover {
-            background-color: #f8fafc;
-        }
+        tr:hover { background-color: #f8fafc; }
 
         [contenteditable="true"] {
             background-color: var(--editable-bg) !important;
             border: 1px dashed var(--editable-border) !important;
-            padding: 6px 8px;
-            border-radius: 4px;
+            padding: 8px 10px;
+            border-radius: 6px;
             outline: none;
             width: 100%;
             box-sizing: border-box;
             display: inline-block;
+            transition: all 0.2s;
         }
 
-        .actions-cell {
+        [contenteditable="true"]:focus {
+            background-color: #ffffff !important;
+            border-color: var(--secondary-color) !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            display: inline-block;
             text-align: center;
-            width: 80px;
+        }
+        .status-recebido { background: #d1fae5; color: #047857; border: 1px solid #a7f3d0; }
+
+        .actions-cell { text-align: center; width: 70px; }
+        .checkbox-cell { text-align: center; width: 40px; }
+        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+
+        /* Documento Oculto para Impressão PDF */
+        #docRelatorioPDF {
+            display: none;
+            background: white;
+            padding: 40px;
+            font-family: 'Inter', sans-serif;
+            color: #0f172a;
         }
 
         @media print {
-            body { background: white; padding: 0; }
-            .container, .tab-content { box-shadow: none; padding: 0; max-width: 100%; display: block !important; }
-            .tabs, .toolbar, .filter-row, .report-box, .actions-cell, th:last-child, td:last-child, #statusNuvem { display: none !important; }
-            [contenteditable="true"] { background-color: transparent !important; border: none !important; }
-            table, th, td { border: 1px solid #000; color: #000; }
-            th { background-color: #e2e8f0 !important; }
+            body { background: white; padding: 0; color: black; }
+            .container > *:not(#aba-relatorio) { display: none !important; }
+            #aba-relatorio > *:not(#docRelatorioPDF) { display: none !important; }
+            #docRelatorioPDF { display: block !important; width: 100%; }
+            .tabs, .toolbar, .filter-row, .report-box, .actions-cell, .checkbox-cell, #statusNuvem { display: none !important; }
+            table, th, td { border: 1px solid #cbd5e1; color: #0f172a; }
+            th { background-color: #0f172a !important; color: white !important; -webkit-print-color-adjust: exact; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>📋 Notas Registradas</h1>
+    <h1>📦 Notas Recebidas Almoxarifado</h1>
     <div id="statusNuvem">Conectando ao Firebase...</div>
 
     <div class="tabs">
-        <button class="tab-btn active" onclick="mudarAba('notas')">📝 Notas e Registros</button>
+        <button class="tab-btn active" onclick="mudarAba('notas')">📋 Gestão de Notas</button>
         <button class="tab-btn" onclick="mudarAba('dashboard')">📊 Dashboard</button>
-        <button class="tab-btn" onclick="mudarAba('relatorio')">🖨️ Relatório Mensal</button>
+        <button class="tab-btn" onclick="mudarAba('relatorio')">📑 Relatório Mensal & PDF</button>
+        <button class="tab-btn" onclick="mudarAba('backup')">💾 Backup / Restaurar</button>
     </div>
 
+    <!-- ABA 1: GESTÃO DE NOTAS -->
     <div id="aba-notas" class="tab-content active">
         <div class="toolbar">
-            <div class="toolbar-group">
-                <button class="btn-success" onclick="adicionarLinha()">➕ Nova Nota</button>
-            </div>
+            <button class="btn-success" onclick="adicionarNota()">➕ Nova Nota</button>
+            <button class="btn-danger" onclick="excluirSelecionadosPrincipal()">🗑️ Excluir Selecionadas</button>
         </div>
 
+        <!-- BARRA ÚNICA DE FILTROS -->
         <div class="filter-row">
             <div style="font-weight: 600; color: var(--primary-color);">🔍 Filtros:</div>
-            <div><input type="text" id="filtroNota" placeholder="Nº da Nota..." oninput="renderizarTabela()"></div>
-            <div><input type="text" id="filtroFornecedor" placeholder="Fornecedor..." oninput="renderizarTabela()"></div>
-            <div><input type="text" id="filtroDescricao" placeholder="Descrição..." oninput="renderizarTabela()"></div>
-            <div><input type="month" id="filtroMes" onchange="renderizarTabela()"></div>
-            <button onclick="limparFiltros()" style="background-color: #64748b;">Limpar</button>
+            <div><input type="text" id="filtroNota" placeholder="Nº da Nota..." oninput="renderizarTabelaPrincipal()"></div>
+            <div><input type="text" id="filtroFornecedor" placeholder="Fornecedor..." oninput="renderizarTabelaPrincipal()"></div>
+            <div><input type="text" id="filtroItem" placeholder="Item / Produto..." oninput="renderizarTabelaPrincipal()"></div>
+            <button onclick="limparFiltrosPrincipal()" style="background-color: #64748b;">Limpar</button>
         </div>
 
         <div class="table-responsive">
-            <table id="tabelaNotas">
+            <table>
                 <thead>
                     <tr>
-                        <th>Número da Nota</th>
+                        <th class="checkbox-cell"><input type="checkbox" id="selectAllPrincipal" onclick="toggleSelectAllPrincipal(this)"></th>
+                        <th>Nº da Nota</th>
                         <th>Fornecedor</th>
-                        <th>Descrição do Item</th>
-                        <th>Quantidade</th>
-                        <th>Dia Recebido</th>
-                        <th>Responsável</th>
-                        <th class="actions-cell">Ações</th>
+                        <th>Item / Produto</th>
+                        <th>Data Recebimento</th>
+                        <th>Qtd Recebida</th>
+                        <th>Valor Unitário (R$)</th>
+                        <th>Valor Total (R$)</th>
+                        <th>Conferente</th>
+                        <th>Status</th>
+                        <th class="actions-cell">Ação</th>
                     </tr>
                 </thead>
                 <tbody id="corpoTabela">
-                    <tr><td colspan="7" style="text-align: center; color: #64748b; padding: 20px;">Carregando dados da nuvem...</td></tr>
+                    <tr><td colspan="11" style="text-align: center; color: #64748b; padding: 25px;">Carregando dados...</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 
+    <!-- ABA 2: DASHBOARD -->
     <div id="aba-dashboard" class="tab-content">
         <h2>Painel de Indicadores</h2>
-        <div class="dashboard">
-            <div class="card"><h3>Total de Registros</h3><p id="statTotalNotas">0</p></div>
-            <div class="card"><h3>Quantidade Total</h3><p id="statSomaQtd">0</p></div>
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3>Total de Notas Registradas</h3>
+                <p id="statTotalNotas">0</p>
+            </div>
+            <div class="card success">
+                <h3>Valor Total Acumulado</h3>
+                <p id="statValorTotal">R$ 0,00</p>
+            </div>
+            <div class="card purple">
+                <h3>Fornecedores Cadastrados</h3>
+                <p id="statFornecedores">0</p>
+            </div>
         </div>
     </div>
 
+    <!-- ABA 3: RELATÓRIO MENSAL & PDF -->
     <div id="aba-relatorio" class="tab-content">
-        <h2>Gerador de Relatório Mensal</h2>
+        <h2>Relatório Mensal de Recebimento</h2>
         <div class="report-box">
-            <label style="font-weight: 500; display: block; margin-bottom: 8px;">Selecione o Mês:</label>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <input type="month" id="mesRelatorio" style="padding: 10px; font-size: 15px;">
-                <button class="btn-warning" onclick="imprimirRelatorioMensal()">🖨️ Imprimir</button>
+            <p style="color: #64748b; margin-top: 0; line-height: 1.4;">Filtre o relatório por data completa (ex: 30/setembro/2026), por mês ou por fornecedor específico e imprima apenas os itens selecionados.</p>
+            
+            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
+                <div>
+                    <label style="font-weight: 600; display: block; margin-bottom: 5px;">Data Específica:</label>
+                    <input type="text" id="filtroDataCompleta" placeholder="Ex: 30/09/2026 ou 30/setembro/2026" style="padding: 9px 12px; width: 250px;" oninput="renderizarRelatorio()">
+                </div>
+                <div>
+                    <label style="font-weight: 600; display: block; margin-bottom: 5px;">Mês do Relatório:</label>
+                    <input type="month" id="filtroMesRelatorio" style="padding: 9px 12px;" onchange="renderizarRelatorio()">
+                </div>
+                <div>
+                    <label style="font-weight: 600; display: block; margin-bottom: 5px;">Filtrar Fornecedor:</label>
+                    <select id="filtroFornecedorRelatorio" onchange="renderizarRelatorio()" style="min-width: 220px;">
+                        <option value="">-- Todos os Fornecedores --</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px; align-self: flex-end; flex-wrap: wrap;">
+                    <button class="btn-warning" onclick="gerarPDFRelatorio()">📄 Gerar PDF (Todos filtrados)</button>
+                    <button class="btn-success" onclick="gerarPDFSelecionados()">🖨️ Imprimir Apenas Selecionados</button>
+                    <button class="btn-danger" onclick="excluirSelecionadosRelatorio()">🗑️ Excluir Selecionadas</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="checkbox-cell"><input type="checkbox" id="selectAllRelatorio" onclick="toggleSelectAllRelatorio(this)"></th>
+                        <th>Nº da Nota</th>
+                        <th>Fornecedor</th>
+                        <th>Item / Produto</th>
+                        <th>Data Recebimento</th>
+                        <th>Qtd Recebida</th>
+                        <th>Valor Unitário</th>
+                        <th>Valor Total</th>
+                        <th>Conferente</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoTabelaRelatorio">
+                    <tr><td colspan="9" style="text-align: center; color: #64748b; padding: 25px;">Nenhum registro encontrado.</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ESTRUTURA OCULTA PARA PDF OTIMIZADO -->
+        <div id="docRelatorioPDF">
+            <div style="border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h2 style="margin: 0; color: #0f172a; font-size: 20px;">ELOSCIENTIFIC</h2>
+                    <p style="margin: 4px 0; font-size: 12px; color: #475569;">CNPJ: 44.841.520/0001-00</p>
+                    <p style="margin: 4px 0; font-size: 12px; color: #475569;">Endereço: Rua Guilherme de Carvalho Whitaker, 276 – Jd. Bongiovani – Presidente Prudente/SP</p>
+                </div>
+                <div style="text-align: right;">
+                    <h3 style="margin: 0; color: #2563eb; font-size: 15px;">RELATÓRIO DE RECEBIMENTO DE MERCADORIA ELOSCIENTIFIC</h3>
+                    <p style="margin: 4px 0; font-size: 12px; color: #475569;" id="pdfPeriodoRelatorio"></p>
+                </div>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
+                <thead>
+                    <tr style="background: #0f172a; color: white;">
+                        <th style="padding: 10px; font-size: 11px; text-align: center;">Nº Nota</th>
+                        <th style="padding: 10px; font-size: 11px; text-align: left;">Fornecedor</th>
+                        <th style="padding: 10px; font-size: 11px; text-align: left;">Item / Produto</th>
+                        <th style="padding: 10px; font-size: 11px; text-align: center;">Data</th>
+                        <th style="padding: 10px; font-size: 11px; text-align: center;">Qtd</th>
+                        <th style="padding: 10px; font-size: 11px; text-align: right;">V. Unit.</th>
+                        <th style="padding: 10px; font-size: 11px; text-align: right;">V. Total</th>
+                        <th style="padding: 10px; font-size: 11px; text-align: left;">Conferente</th>
+                    </tr>
+                </thead>
+                <tbody id="pdfCorpoRelatorio"></tbody>
+            </table>
+
+            <div style="text-align: right; margin-bottom: 40px; font-size: 16px; font-weight: bold; color: #0f172a;" id="pdfSomaTotalGeral"></div>
+
+            <div style="margin-top: 50px; display: flex; justify-content: space-between;">
+                <div style="border-top: 1px solid #94a3b8; width: 250px; text-align: center; padding-top: 6px; font-size: 12px; color: #475569;">Responsável Almoxarifado</div>
+                <div style="border-top: 1px solid #94a3b8; width: 250px; text-align: center; padding-top: 6px; font-size: 12px; color: #475569;">Diretoria / Gestão</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ABA 4: BACKUP E RESTAURADOR -->
+    <div id="aba-backup" class="tab-content">
+        <h2>Gerenciamento de Backup</h2>
+        <div class="report-box" style="max-width: 650px;">
+            <p style="color: #64748b; margin-top: 0; line-height: 1.5;">Baixe um arquivo de segurança contendo todas as suas notas registradas na nuvem ou restaure seus dados a partir de um arquivo JSON anterior.</p>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 25px;">
+                <button class="btn-success" onclick="fazerBackup()">📥 Baixar Backup (JSON)</button>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="file" id="arquivoBackup" accept=".json" style="display: none;" onchange="restaurarBackup(event)">
+                    <button class="btn-purple" onclick="document.getElementById('arquivoBackup').click()">📤 Restaurar Backup</button>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // COLE ABAIXO A SUA CONFIGURAÇÃO DO FIREBASE
     const firebaseConfig = {
-        apiKey: "AIzaSyB_stAqlEz81bKnAWk1LPqoU9v6W6TVuo8",
+        apiKey: "SUA_API_KEY_AQUI",
         authDomain: "seu-projeto.firebaseapp.com",
         projectId: "seu-projeto",
         storageBucket: "seu-projeto.appspot.com",
@@ -339,8 +485,13 @@
     document.addEventListener("DOMContentLoaded", function() {
         const statusEl = document.getElementById('statusNuvem');
         
-        // Ordena os registros do mais recente para o mais antigo automaticamente no topo
-        db.collection("notas").orderBy("criadoEm", "desc").onSnapshot((snapshot) => {
+        const hoje = new Date();
+        const anoAtual = hoje.getFullYear();
+        const mesAtual = String(hoje.getMonth() + 1).padStart(2, '0');
+        const inputMes = document.getElementById('filtroMesRelatorio');
+        if (inputMes) inputMes.value = `${anoAtual}-${mesAtual}`;
+
+        db.collection("notas_recebidas_almoxarifado").orderBy("criadoEm", "desc").onSnapshot((snapshot) => {
             dadosNotas = [];
             snapshot.forEach((doc) => {
                 dadosNotas.push({ idDoc: doc.id, ...doc.data() });
@@ -350,8 +501,10 @@
             statusEl.style.background = "#d1fae5";
             statusEl.style.color = "#065f46";
             
-            renderizarTabela();
+            renderizarTabelaPrincipal();
             atualizarDashboard();
+            renderizarRelatorio();
+            atualizarSelectFornecedoresRelatorio();
         }, (error) => {
             statusEl.innerText = "⚠️ Erro de conexão com o Firebase";
             statusEl.style.background = "#fee2e2";
@@ -364,108 +517,486 @@
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
-        if (abaId === 'notas') {
-            document.querySelector('.tabs button:nth-child(1)').classList.add('active');
-            document.getElementById('aba-notas').classList.add('active');
-        } else if (abaId === 'dashboard') {
-            document.querySelector('.tabs button:nth-child(2)').classList.add('active');
-            document.getElementById('aba-dashboard').classList.add('active');
-        } else if (abaId === 'relatorio') {
-            document.querySelector('.tabs button:nth-child(3)').classList.add('active');
-            document.getElementById('aba-relatorio').classList.add('active');
-        }
-    }
-
-    function adicionarLinha() {
-        const hoje = new Date();
-        const novaNota = {
-            numero: "",
-            fornecedor: "",
-            descricao: "",
-            quantidade: "1",
-            data: `${String(hoje.getDate()).padStart(2, '0')}/${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()}`,
-            responsavel: "",
-            criadoEm: firebase.firestore.FieldValue.serverTimestamp() // Usado para ordenar sempre no topo
+        const mapaAbas = {
+            'notas': 1,
+            'dashboard': 2,
+            'relatorio': 3,
+            'backup': 4
         };
-        db.collection("notas").add(novaNota);
+
+        document.querySelector(`.tabs button:nth-child(${mapaAbas[abaId]})`).classList.add('active');
+        document.getElementById(`aba-${abaId}`).classList.add('active');
+        
+        if (abaId === 'relatorio') renderizarRelatorio();
+        if (abaId === 'dashboard') atualizarDashboard();
     }
 
-    function excluirLinha(idDoc) {
-        if (confirm("Deseja excluir este registro?")) {
-            db.collection("notas").doc(idDoc).delete();
+    function adicionarNota() {
+        const hoje = new Date();
+        const dia = String(hoje.getDate()).padStart(2, '0');
+        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+        const ano = hoje.getFullYear();
+
+        const novaItem = {
+            numeroNota: "",
+            fornecedor: "",
+            item: "",
+            dataRecebimento: `${dia}/${mes}/${ano}`,
+            qtdRecebida: "1",
+            valorUnitario: "0,00",
+            conferente: "",
+            criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        db.collection("notas_recebidas_almoxarifado").add(novaItem);
+    }
+
+    function excluirNota(idDoc) {
+        if (confirm("Deseja excluir esta nota registrada?")) {
+            db.collection("notas_recebidas_almoxarifado").doc(idDoc).delete();
         }
     }
 
     function atualizarCampo(idDoc, campo, valor) {
-        db.collection("notas").doc(idDoc).update({ [campo]: valor });
+        if (campo === 'valorUnitario') {
+            valor = formatarMoedaInput(valor);
+        } else if (campo === 'numeroNota') {
+            valor = formatarNumeroNota(valor);
+        }
+        db.collection("notas_recebidas_almoxarifado").doc(idDoc).update({ [campo]: valor });
     }
 
-    function renderizarTabela() {
+    function formatarNumeroNota(texto) {
+        let apenasNumeros = texto.replace(/\D/g, '');
+        if (!apenasNumeros) return "";
+        return apenasNumeros.padStart(9, '0');
+    }
+
+    function formatarMoedaInput(texto) {
+        let apenasNumeros = texto.replace(/\D/g, '');
+        if (!apenasNumeros) return "0,00";
+        let numero = parseFloat(apenasNumeros) / 100;
+        return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function calcularTotal(qtd, unitario) {
+        const q = parseFloat(qtd) || 0;
+        let uStr = String(unitario || '0').replace('R$', '').trim();
+        uStr = uStr.replace(/\./g, '').replace(',', '.');
+        const u = parseFloat(uStr) || 0;
+        return (q * u).toFixed(2);
+    }
+
+    function normalizarTextoData(texto) {
+        if (!texto) return '';
+        const mapaMeses = {
+            'janeiro': '01', 'fevereiro': '02', 'marco': '03', 'março': '03',
+            'abril': '04', 'maio': '05', 'junho': '06', 'julho': '07',
+            'agosto': '08', 'setembro': '09', 'outubro': '10', 'novembro': '11', 'dezembro': '12'
+        };
+        let t = texto.toLowerCase().trim();
+        for (let mesNome in mapaMeses) {
+            t = t.replace(mesNome, mapaMeses[mesNome]);
+        }
+        return t;
+    }
+
+    function extrairAnoMes(dataStr) {
+        if (!dataStr || typeof dataStr !== 'string') return null;
+        let dataNormalizada = normalizarTextoData(dataStr);
+        
+        if (dataNormalizada.includes('-')) {
+            const partes = dataNormalizada.split('-');
+            if (partes.length >= 2 && partes[0].length === 4) {
+                return `${partes[0]}-${partes[1].padStart(2, '0')}`;
+            }
+        }
+        
+        if (dataNormalizada.includes('/')) {
+            const partes = dataNormalizada.split('/');
+            if (partes.length === 3) {
+                let ano = partes[2].trim();
+                let mes = partes[1].trim().padStart(2, '0');
+                if (ano.length === 4) {
+                    return `${ano}-${mes}`;
+                }
+            }
+        }
+        return null;
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            const elementoAtivo = document.activeElement;
+            if (elementoAtivo && elementoAtivo.getAttribute('contenteditable') === 'true') {
+                event.preventDefault();
+                elementoAtivo.blur();
+                
+                const celulaAtual = elementoAtivo.closest('td');
+                const linhaAtual = celulaAtual.closest('tr');
+                let proximaCelula = celulaAtual.nextElementSibling;
+
+                function focarCampo(el) {
+                    el.focus();
+                    const range = document.createRange();
+                    range.selectNodeContents(el);
+                    range.collapse(false);
+                    const sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }
+
+                while (proximaCelula) {
+                    const editavel = proximaCelula.querySelector('[contenteditable="true"]');
+                    if (editavel) {
+                        focarCampo(editavel);
+                        return;
+                    }
+                    proximaCelula = proximaCelula.nextElementSibling;
+                }
+
+                const proximaLinha = linhaAtual.nextElementSibling;
+                if (proximaLinha) {
+                    const todasCelulas = proximaLinha.querySelectorAll('td');
+                    for (let td of todasCelulas) {
+                        const editavel = td.querySelector('[contenteditable="true"]');
+                        if (editavel) {
+                            focarCampo(editavel);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    function renderizarTabelaPrincipal() {
         const tbody = document.getElementById('corpoTabela');
         const pNota = document.getElementById('filtroNota').value.toLowerCase();
         const pForn = document.getElementById('filtroFornecedor').value.toLowerCase();
-        const pDesc = document.getElementById('filtroDescricao').value.toLowerCase();
-        const fMes = document.getElementById('filtroMes').value;
+        const pItem = document.getElementById('filtroItem').value.toLowerCase();
+        const selectAll = document.getElementById('selectAllPrincipal');
+        if (selectAll) selectAll.checked = false;
         
         tbody.innerHTML = '';
 
         let filtrados = dadosNotas.filter(item => {
-            const mN = (item.numero || '').toLowerCase().includes(pNota);
+            const mN = (item.numeroNota || '').toLowerCase().includes(pNota);
             const mF = (item.fornecedor || '').toLowerCase().includes(pForn);
-            const mD = (item.descricao || '').toLowerCase().includes(pDesc);
-            let mMes = true;
-            if (fMes && item.data && item.data.includes('/')) {
-                const p = item.data.split('/');
-                if (p.length === 3) mMes = (`${p[2]}-${p[1]}` === fMes);
-            }
-            return mN && mF && mD && mMes;
+            const mI = (item.item || '').toLowerCase().includes(pItem);
+            return mN && mF && mI;
         });
 
         if (filtrados.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #64748b; padding: 20px;">Nenhum registro encontrado.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: #64748b; padding: 25px;">Nenhuma nota encontrada.</td></tr>`;
             return;
         }
 
         filtrados.forEach((item) => {
+            const totalCalc = calcularTotal(item.qtdRecebida, item.valorUnitario);
+            const totalFormatado = parseFloat(totalCalc).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><div contenteditable="true" onblur="atualizarCampo('${item.idDoc}', 'numero', this.innerText)">${item.numero || ''}</div></td>
+                <td class="checkbox-cell"><input type="checkbox" class="check-principal" value="${item.idDoc}"></td>
+                <td><div contenteditable="true" onblur="atualizarCampo('${item.idDoc}', 'numeroNota', this.innerText); renderizarTabelaPrincipal();">${item.numeroNota || ''}</div></td>
                 <td><div contenteditable="true" onblur="atualizarCampo('${item.idDoc}', 'fornecedor', this.innerText)">${item.fornecedor || ''}</div></td>
-                <td><div contenteditable="true" onblur="atualizarCampopar('${item.idDoc}', 'descricao', this.innerText)" onblur="atualizarCampo('${item.idDoc}', 'descricao', this.innerText)">${item.descricao || ''}</div></td>
-                <td><div contenteditable="true" onblur="atualizarCampo('${item.idDoc}', 'quantidade', this.innerText)">${item.quantidade || ''}</div></td>
-                <td><div contenteditable="true" onblur="atualizarCampo('${item.idDoc}', 'data', this.innerText)">${item.data || ''}</div></td>
-                <td><div contenteditable="true" onblur="atualizarCampo('${item.idDoc}', 'responsavel', this.innerText)">${item.responsavel || ''}</div></td>
+                <td><div contenteditable="true" onblur="atualizarCampo('${item.idDoc}', 'item', this.innerText)">${item.item || ''}</div></td>
+                <td><div contenteditable="true" onblur="atualizarCampo('${item.idDoc}', 'dataRecebimento', this.innerText)">${item.dataRecebimento || ''}</div></td>
+                <td><div contenteditable="true" onblur="atualizarCampo('${item.idDoc}', 'qtdRecebida', this.innerText); renderizarTabelaPrincipal();">${item.qtdRecebida || ''}</div></td>
+                <td><div contenteditable="true" onblur="atualizarCampo('${item.idDoc}', 'valorUnitario', this.innerText); renderizarTabelaPrincipal();">${item.valorUnitario || '0,00'}</div></td>
+                <td style="font-weight: 600; color: #0f172a;">R$ ${totalFormatado}</td>
+                <td><div contenteditable="true" onblur="atualizarCampo('${item.idDoc}', 'conferente', this.innerText)">${item.conferente || ''}</div></td>
+                <td><span class="status-badge status-recebido">RECEBIDO</span></td>
                 <td class="actions-cell">
-                    <button class="btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="excluirLinha('${item.idDoc}')">🗑️</button>
+                    <button class="btn-danger" style="padding: 6px 10px; font-size: 12px;" onclick="excluirNota('${item.idDoc}')">🗑️</button>
                 </td>
             `;
             tbody.appendChild(tr);
         });
     }
 
-    function limparFiltros() {
-        document.getElementById('filtroNota').value = '';
-        document.getElementById('filtroFornecedor').value = '';
-        document.getElementById('filtroDescricao').value = '';
-        document.getElementById('filtroMes').value = '';
-        renderizarTabela();
-    }
-
     function atualizarDashboard() {
         document.getElementById('statTotalNotas').innerText = dadosNotas.length;
-        let somaQtd = dadosNotas.reduce((acc, curr) => acc + (parseFloat(curr.quantidade) || 0), 0);
-        document.getElementById('statSomaQtd').innerText = somaQtd;
+        
+        let somaGeral = 0;
+        dadosNotas.forEach(item => {
+            somaGeral += parseFloat(calcularTotal(item.qtdRecebida, item.valorUnitario)) || 0;
+        });
+        document.getElementById('statValorTotal').innerText = `R$ ${somaGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        const fornecedoresUnicos = [...new Set(dadosNotas.map(item => item.fornecedor ? item.fornecedor.trim() : '').filter(f => f !== ''))];
+        document.getElementById('statFornecedores').innerText = fornecedoresUnicos.length;
     }
 
-    function imprimirRelatorioMensal() {
-        const mesVal = document.getElementById('mesRelatorio').value;
-        if (!mesVal) { alert("Selecione o mês!"); return; }
-        document.getElementById('filtroMes').value = mesVal;
-        renderizarTabela();
-        mudarAba('notas');
-        setTimeout(() => window.print(), 300);
+    function limparFiltrosPrincipal() {
+        document.getElementById('filtroNota').value = '';
+        document.getElementById('filtroFornecedor').value = '';
+        document.getElementById('filtroItem').value = '';
+        renderizarTabelaPrincipal();
+    }
+
+    function toggleSelectAllPrincipal(masterCheckbox) {
+        const checkboxes = document.querySelectorAll('.check-principal');
+        checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
+    }
+
+    async function excluirSelecionadosPrincipal() {
+        const checkboxes = document.querySelectorAll('.check-principal:checked');
+        if (checkboxes.length === 0) {
+            alert("Nenhuma nota selecionada para exclusão.");
+            return;
+        }
+
+        if (!confirm(`Deseja excluir as ${checkboxes.length} notas selecionadas?`)) {
+            return;
+        }
+
+        try {
+            let batch = db.batch();
+            let contador = 0;
+
+            checkboxes.forEach((cb) => {
+                const docRef = db.collection("notas_recebidas_almoxarifado").doc(cb.value);
+                batch.delete(docRef);
+                contador++;
+            });
+
+            await batch.commit();
+            alert(`${contador} notas excluídas com sucesso!`);
+        } catch (erro) {
+            alert("Erro ao excluir notas. Tente novamente.");
+            console.error(erro);
+        }
+    }
+
+    function atualizarSelectFornecedoresRelatorio() {
+        const select = document.getElementById('filtroFornecedorRelatorio');
+        const valorAtual = select.value;
+        
+        const fornecedoresUnicos = [...new Set(dadosNotas.map(item => item.fornecedor ? item.fornecedor.trim() : '').filter(f => f !== ''))].sort();
+        
+        select.innerHTML = '<option value="">-- Todos os Fornecedores --</option>';
+        fornecedoresUnicos.forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f;
+            opt.textContent = f;
+            select.appendChild(opt);
+        });
+        
+        if (valorAtual) select.value = valorAtual;
+    }
+
+    function obterNotasFiltradasRelatorio() {
+        const mesVal = document.getElementById('filtroMesRelatorio').value;
+        const dataCompVal = normalizarTextoData(document.getElementById('filtroDataCompleta').value);
+        const fornVal = document.getElementById('filtroFornecedorRelatorio').value.toLowerCase();
+
+        return dadosNotas.filter(item => {
+            if (dataCompVal) {
+                const dataItemNorm = normalizarTextoData(item.dataRecebimento || '');
+                if (!dataItemNorm.includes(dataCompVal)) return false;
+            }
+            if (mesVal) {
+                const anoMesItem = extrairAnoMes(item.dataRecebimento);
+                if (anoMesItem !== mesVal) return false;
+            }
+            if (fornVal) {
+                const fornItem = (item.fornecedor || '').toLowerCase().trim();
+                if (fornItem !== fornVal) return false;
+            }
+            return true;
+        });
+    }
+
+    function renderizarRelatorio() {
+        const tbody = document.getElementById('corpoTabelaRelatorio');
+        const selectAll = document.getElementById('selectAllRelatorio');
+        if (selectAll) selectAll.checked = false;
+        tbody.innerHTML = '';
+
+        const filtrados = obterNotasFiltradasRelatorio();
+
+        if (filtrados.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #64748b; padding: 25px;">Nenhum registro encontrado para este filtro.</td></tr>`;
+            return;
+        }
+
+        filtrados.forEach(item => {
+            const totalCalc = calcularTotal(item.qtdRecebida, item.valorUnitario);
+            const totalFormatado = parseFloat(totalCalc).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const unitFormatado = parseFloat(String(item.valorUnitario || '0').replace(/\./g, '').replace(',', '.')).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="checkbox-cell"><input type="checkbox" class="check-relatorio" value="${item.idDoc}"></td>
+                <td>${item.numeroNota || ''}</td>
+                <td>${item.fornecedor || ''}</td>
+                <td>${item.item || ''}</td>
+                <td>${item.dataRecebimento || ''}</td>
+                <td>${item.qtdRecebida || ''}</td>
+                <td>R$ ${unitFormatado}</td>
+                <td style="font-weight: 600; color: #0f172a;">R$ ${totalFormatado}</td>
+                <td>${item.conferente || ''}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function toggleSelectAllRelatorio(masterCheckbox) {
+        const checkboxes = document.querySelectorAll('.check-relatorio');
+        checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
+    }
+
+    async function excluirSelecionadosRelatorio() {
+        const checkboxes = document.querySelectorAll('.check-relatorio:checked');
+        if (checkboxes.length === 0) {
+            alert("Nenhum item selecionado para exclusão.");
+            return;
+        }
+
+        if (!confirm(`Deseja excluir os ${checkboxes.length} itens selecionados?`)) {
+            return;
+        }
+
+        try {
+            let batch = db.batch();
+            let contador = 0;
+
+            checkboxes.forEach((cb) => {
+                const docRef = db.collection("notas_recebidas_almoxarifado").doc(cb.value);
+                batch.delete(docRef);
+                contador++;
+            });
+
+            await batch.commit();
+            alert(`${contador} itens excluídos com sucesso!`);
+        } catch (erro) {
+            alert("Erro ao excluir itens. Tente novamente.");
+            console.error(erro);
+        }
+    }
+
+    function gerarPDFRelatorio() {
+        const filtrados = obterNotasFiltradasRelatorio();
+        if (filtrados.length === 0) {
+            alert("Não há dados para gerar o relatório em PDF com os filtros selecionados.");
+            return;
+        }
+        executarImpressaoPDF(filtrados, "Relatório Geral (Filtrado)");
+    }
+
+    function gerarPDFSelecionados() {
+        const checkboxes = document.querySelectorAll('.check-relatorio:checked');
+        if (checkboxes.length === 0) {
+            alert("Nenhum item selecionado na tabela de relatório para impressão.");
+            return;
+        }
+        const idsSelecionados = Array.from(checkboxes).map(cb => cb.value);
+        const selecionados = dadosNotas.filter(item => idsSelecionados.includes(item.idDoc));
+        executarImpressaoPDF(selecionados, "Relatório de Itens Selecionados");
+    }
+
+    function executarImpressaoPDF(listaItens, tituloPeriodo) {
+        const periodoPdf = document.getElementById('pdfPeriodoRelatorio');
+        const pdfTbody = document.getElementById('pdfCorpoRelatorio');
+        const somaTotalEl = document.getElementById('pdfSomaTotalGeral');
+
+        const dataCompVal = document.getElementById('filtroDataCompleta').value;
+        const mesVal = document.getElementById('filtroMesRelatorio').value;
+        const fornVal = document.getElementById('filtroFornecedorRelatorio').value;
+
+        let textoInfo = tituloPeriodo;
+        if (dataCompVal) textoInfo += ` | Data: ${dataCompVal}`;
+        else if (mesVal) textoInfo += ` | Mês: ${mesVal}`;
+        if (fornVal) textoInfo += ` | Fornecedor: ${fornVal}`;
+
+        periodoPdf.textContent = textoInfo;
+
+        pdfTbody.innerHTML = '';
+        let somaGeral = 0;
+
+        listaItens.forEach(item => {
+            const totalCalc = parseFloat(calcularTotal(item.qtdRecebida, item.valorUnitario));
+            somaGeral += totalCalc;
+
+            const unitFormatado = parseFloat(String(item.valorUnitario || '0').replace(/\./g, '').replace(',', '.')).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const totalFormatado = totalCalc.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; font-size: 11px; text-align: center; font-weight: bold;">${item.numeroNota || ''}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; font-size: 11px;">${item.fornecedor || ''}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; font-size: 11px;">${item.item || ''}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; font-size: 11px; text-align: center;">${item.dataRecebimento || ''}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; font-size: 11px; text-align: center;"><b>${item.qtdRecebida || ''}</b></td>
+                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; font-size: 11px; text-align: right;">R$ ${unitFormatado}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; font-size: 11px; text-align: right; font-weight: bold;">R$ ${totalFormatado}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; font-size: 11px;">${item.conferente || ''}</td>
+            `;
+            pdfTbody.appendChild(tr);
+        });
+
+        somaTotalEl.textContent = `VALOR TOTAL GERAL: R$ ${somaGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        const docDiv = document.getElementById('docRelatorioPDF');
+        docDiv.style.display = 'block';
+        window.print();
+        docDiv.style.display = 'none';
+    }
+
+    function fazerBackup() {
+        if (dadosNotas.length === 0) {
+            alert("Não há dados para exportar.");
+            return;
+        }
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dadosNotas, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `backup_notas_almoxarifado_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    async function restaurarBackup(event) {
+        const arquivo = event.target.files[0];
+        if (!arquivo) return;
+
+        if (!confirm("Atenção: Restaurar um backup irá importar as notas do arquivo para o seu banco de dados atual. Deseja continuar?")) {
+            event.target.value = '';
+            return;
+        }
+
+        const leitor = new FileReader();
+        leitor.onload = async function(e) {
+            try {
+                const dadosRestaurar = JSON.parse(e.target.result);
+                if (!Array.isArray(dadosRestaurar)) {
+                    alert("O arquivo JSON de backup é inválido.");
+                    return;
+                }
+
+                let batch = db.batch();
+                let contador = 0;
+
+                for (let item of dadosRestaurar) {
+                    const novoRef = db.collection("notas_recebidas_almoxarifado").doc();
+                    const copia = { ...item };
+                    delete copia.idDoc;
+                    batch.set(novoRef, copia);
+                    contador++;
+                }
+
+                await batch.commit();
+                alert(`${contador} itens restaurados com sucesso para o Firebase!`);
+            } catch (err) {
+                alert("Erro ao ler ou processar o arquivo de backup.");
+                console.error(err);
+            } finally {
+                event.target.value = '';
+            }
+        };
+        leitor.readAsText(arquivo);
     }
 </script>
-
-</body>
 </html>
