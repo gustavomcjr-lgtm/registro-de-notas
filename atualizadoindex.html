@@ -469,17 +469,23 @@
 
 <script>
     const firebaseConfig = {
-        apiKey: "SUA_API_KEY_AQUI",
-        authDomain: "seu-projeto.firebaseapp.com",
-        projectId: "seu-projeto",
-        storageBucket: "seu-projeto.appspot.com",
-        messagingSenderId: "SEU_SENDER_ID",
-        appId: "SEU_APP_ID"
+        apiKey: "AIzaSyB_stAqlEz81bKnAWk1LPqoU9v6W6TVuo8",
+        authDomain: "notas-3a3b1.firebaseapp.com",
+        projectId: "notas-3a3b1",
+        storageBucket: "notas-3a3b1.firebasestorage.app",
+        messagingSenderId: "212629270963",
+        appId: "1:212629270963:web:0396cf8cb2434d5f935bc6"
     };
 
-    firebase.initializeApp(firebaseConfig);
+    try {
+        firebase.initializeApp(firebaseConfig);
+    } catch (e) {
+        console.warn("Firebase já inicializado:", e);
+    }
+
     const db = firebase.firestore();
 
+    let usandoFirebase = true;
     let dadosNotas = [];
 
     document.addEventListener("DOMContentLoaded", function() {
@@ -497,7 +503,8 @@
                 dadosNotas.push({ idDoc: doc.id, ...doc.data() });
             });
             
-            statusEl.innerText = "☁️ Conectado à Nuvem (Sincronizado)";
+            usandoFirebase = true;
+            statusEl.innerText = "☁️ Conectado à Nuvem (Firebase Sincronizado)";
             statusEl.style.background = "#d1fae5";
             statusEl.style.color = "#065f46";
             
@@ -506,12 +513,31 @@
             renderizarRelatorio();
             atualizarSelectFornecedoresRelatorio();
         }, (error) => {
-            statusEl.innerText = "⚠️ Erro de conexão com o Firebase";
-            statusEl.style.background = "#fee2e2";
-            statusEl.style.color = "#991b1b";
-            console.error("Erro: ", error);
+            // Fallback automático para modo local se o navegador bloquear o arquivo file://
+            usandoFirebase = false;
+            statusEl.innerText = "⚠️ Modo Local Ativo (Salvando no Navegador - file:// bloqueado)";
+            statusEl.style.background = "#fef3c7";
+            statusEl.style.color = "#92400e";
+            carregarDadosLocais();
         });
     });
+
+    function carregarDadosLocais() {
+        const salvos = localStorage.getItem('dados_notas_almoxarifado_local');
+        if (salvos) {
+            dadosNotas = JSON.parse(salvos);
+        } else {
+            dadosNotas = [];
+        }
+        renderizarTabelaPrincipal();
+        atualizarDashboard();
+        renderizarRelatorio();
+        atualizarSelectFornecedoresRelatorio();
+    }
+
+    function salvarDadosLocais() {
+        localStorage.setItem('dados_notas_almoxarifado_local', JSON.stringify(dadosNotas));
+    }
 
     function mudarAba(abaId) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -545,14 +571,37 @@
             qtdRecebida: "1",
             valorUnitario: "0,00",
             conferente: "",
-            criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+            criadoEm: new Date().toISOString()
         };
-        db.collection("notas_recebidas_almoxarifado").add(novaItem);
+
+        if (usandoFirebase) {
+            db.collection("notas_recebidas_almoxarifado").add({
+                ...novaItem,
+                criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } else {
+            novaItem.idDoc = 'local_' + Date.now();
+            dadosNotas.unshift(novaItem);
+            salvarDadosLocais();
+            renderizarTabelaPrincipal();
+            atualizarDashboard();
+            renderizarRelatorio();
+            atualizarSelectFornecedoresRelatorio();
+        }
     }
 
-    function excluirNota(idDoc) {
+    async function excluirNota(idDoc) {
         if (confirm("Deseja excluir esta nota registrada?")) {
-            db.collection("notas_recebidas_almoxarifado").doc(idDoc).delete();
+            if (usandoFirebase) {
+                db.collection("notas_recebidas_almoxarifado").doc(idDoc).delete();
+            } else {
+                dadosNotas = dadosNotas.filter(item => item.idDoc !== idDoc);
+                salvarDadosLocais();
+                renderizarTabelaPrincipal();
+                atualizarDashboard();
+                renderizarRelatorio();
+                atualizarSelectFornecedoresRelatorio();
+            }
         }
     }
 
@@ -562,7 +611,17 @@
         } else if (campo === 'numeroNota') {
             valor = formatarNumeroNota(valor);
         }
-        db.collection("notas_recebidas_almoxarifado").doc(idDoc).update({ [campo]: valor });
+
+        if (usandoFirebase) {
+            db.collection("notas_recebidas_almoxarifado").doc(idDoc).update({ [campo]: valor });
+        } else {
+            const item = dadosNotas.find(i => i.idDoc === idDoc);
+            if (item) {
+                item[campo] = valor;
+                salvarDadosLocais();
+                atualizarDashboard();
+            }
+        }
     }
 
     function formatarNumeroNota(texto) {
@@ -751,60 +810,74 @@
             return;
         }
 
-        try {
-            let batch = db.batch();
-            let contador = 0;
+        if (usandoFirebase) {
+            try {
+                let batch = db.batch();
+                let contador = 0;
 
-            checkboxes.forEach((cb) => {
-                const docRef = db.collection("notas_recebidas_almoxarifado").doc(cb.value);
-                batch.delete(docRef);
-                contador++;
-            });
+                checkboxes.forEach((cb) => {
+                    const docRef = db.collection("notas_recebidas_almoxarifado").doc(cb.value);
+                    batch.delete(docRef);
+                    contador++;
+                });
 
-            await batch.commit();
-            alert(`${contador} notas excluídas com sucesso!`);
-        } catch (erro) {
-            alert("Erro ao excluir notas. Tente novamente.");
-            console.error(erro);
+                await batch.commit();
+                alert(`${contador} notas excluídas com sucesso!`);
+            } catch (erro) {
+                alert("Erro ao excluir notas. Tente novamente.");
+                console.error(erro);
+            }
+        } else {
+            const idsParaExcluir = Array.from(checkboxes).map(cb => cb.value);
+            dadosNotas = dadosNotas.filter(item => !idsParaExcluir.includes(item.idDoc));
+            salvarDadosLocais();
+            renderizarTabelaPrincipal();
+            atualizarDashboard();
+            renderizarRelatorio();
+            atualizarSelectFornecedoresRelatorio();
+            alert("Notas excluídas com sucesso!");
         }
     }
 
     function atualizarSelectFornecedoresRelatorio() {
         const select = document.getElementById('filtroFornecedorRelatorio');
+        if (!select) return;
         const valorAtual = select.value;
-        
-        const fornecedoresUnicos = [...new Set(dadosNotas.map(item => item.fornecedor ? item.fornecedor.trim() : '').filter(f => f !== ''))].sort();
+        const fornecedores = [...new Set(dadosNotas.map(i => i.fornecedor ? i.fornecedor.trim() : '').filter(f => f !== ''))].sort();
         
         select.innerHTML = '<option value="">-- Todos os Fornecedores --</option>';
-        fornecedoresUnicos.forEach(f => {
+        fornecedores.forEach(f => {
             const opt = document.createElement('option');
             opt.value = f;
             opt.textContent = f;
             select.appendChild(opt);
         });
-        
-        if (valorAtual) select.value = valorAtual;
+        select.value = valorAtual;
     }
 
-    function obterNotasFiltradasRelatorio() {
-        const mesVal = document.getElementById('filtroMesRelatorio').value;
-        const dataCompVal = normalizarTextoData(document.getElementById('filtroDataCompleta').value);
-        const fornVal = document.getElementById('filtroFornecedorRelatorio').value.toLowerCase();
+    function filtrarListaRelatorio() {
+        const fDataCompleta = normalizarTextoData(document.getElementById('filtroDataCompleta').value);
+        const fMes = document.getElementById('filtroMesRelatorio').value;
+        const fForn = document.getElementById('filtroFornecedorRelatorio').value.toLowerCase();
 
         return dadosNotas.filter(item => {
-            if (dataCompVal) {
-                const dataItemNorm = normalizarTextoData(item.dataRecebimento || '');
-                if (!dataItemNorm.includes(dataCompVal)) return false;
+            const dataNotaNorm = normalizarTextoData(item.dataRecebimento || '');
+            const fornecedorNota = (item.fornecedor || '').toLowerCase();
+
+            let matchData = true;
+            if (fDataCompleta) {
+                matchData = dataNotaNorm.includes(fDataCompleta);
+            } else if (fMes) {
+                let anoMes = extrairAnoMes(item.dataRecebimento);
+                matchData = (anoMes === fMes);
             }
-            if (mesVal) {
-                const anoMesItem = extrairAnoMes(item.dataRecebimento);
-                if (anoMesItem !== mesVal) return false;
+
+            let matchForn = true;
+            if (fForn) {
+                matchForn = fornecedorNota.includes(fForn);
             }
-            if (fornVal) {
-                const fornItem = (item.fornecedor || '').toLowerCase().trim();
-                if (fornItem !== fornVal) return false;
-            }
-            return true;
+
+            return matchData && matchForn;
         });
     }
 
@@ -812,19 +885,19 @@
         const tbody = document.getElementById('corpoTabelaRelatorio');
         const selectAll = document.getElementById('selectAllRelatorio');
         if (selectAll) selectAll.checked = false;
-        tbody.innerHTML = '';
 
-        const filtrados = obterNotasFiltradasRelatorio();
+        tbody.innerHTML = '';
+        const filtrados = filtrarListaRelatorio();
 
         if (filtrados.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #64748b; padding: 25px;">Nenhum registro encontrado para este filtro.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #64748b; padding: 25px;">Nenhum registro encontrado para os filtros selecionados.</td></tr>`;
             return;
         }
 
         filtrados.forEach(item => {
             const totalCalc = calcularTotal(item.qtdRecebida, item.valorUnitario);
             const totalFormatado = parseFloat(totalCalc).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            const unitFormatado = parseFloat(String(item.valorUnitario || '0').replace(/\./g, '').replace(',', '.')).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const unitFormatado = item.valorUnitario || '0,00';
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -835,7 +908,7 @@
                 <td>${item.dataRecebimento || ''}</td>
                 <td>${item.qtdRecebida || ''}</td>
                 <td>R$ ${unitFormatado}</td>
-                <td style="font-weight: 600; color: #0f172a;">R$ ${totalFormatado}</td>
+                <td style="font-weight: 600;">R$ ${totalFormatado}</td>
                 <td>${item.conferente || ''}</td>
             `;
             tbody.appendChild(tr);
@@ -847,6 +920,61 @@
         checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
     }
 
+    function gerarPDFRelatorio() {
+        const filtrados = filtrarListaRelatorio();
+        if (filtrados.length === 0) {
+            alert("Não há dados para gerar o relatório.");
+            return;
+        }
+
+        popularDocumentoPDF(filtrados, "Relatório Geral Filtrado");
+        window.print();
+    }
+
+    function gerarPDFSelecionados() {
+        const checkboxes = document.querySelectorAll('.check-relatorio:checked');
+        if (checkboxes.length === 0) {
+            alert("Nenhum item selecionado na tabela de relatório.");
+            return;
+        }
+
+        const idsSelecionados = Array.from(checkboxes).map(cb => cb.value);
+        const filtrados = dadosNotas.filter(item => idsSelecionados.includes(item.idDoc));
+
+        popularDocumentoPDF(filtrados, "Relatório de Itens Selecionados");
+        window.print();
+    }
+
+    function popularDocumentoPDF(listaItens, tituloPeriodo) {
+        document.getElementById('pdfPeriodoRelatorio').innerText = tituloPeriodo;
+        const pdfTbody = document.getElementById('pdfCorpoRelatorio');
+        pdfTbody.innerHTML = '';
+
+        let somaGeral = 0;
+
+        listaItens.forEach(item => {
+            const totalCalc = parseFloat(calcularTotal(item.qtdRecebida, item.valorUnitario)) || 0;
+            somaGeral += totalCalc;
+            const totalFmt = totalCalc.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const unitFmt = item.valorUnitario || '0,00';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: center;">${item.numeroNota || ''}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: left;">${item.fornecedor || ''}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: left;">${item.item || ''}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: center;">${item.dataRecebimento || ''}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: center;">${item.qtdRecebida || ''}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right;">R$ ${unitFmt}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; font-weight: bold;">R$ ${totalFmt}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: left;">${item.conferente || ''}</td>
+            `;
+            pdfTbody.appendChild(tr);
+        });
+
+        document.getElementById('pdfSomaTotalGeral').innerText = `VALOR TOTAL GERAL: R$ ${somaGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
     async function excluirSelecionadosRelatorio() {
         const checkboxes = document.querySelectorAll('.check-relatorio:checked');
         if (checkboxes.length === 0) {
@@ -854,149 +982,105 @@
             return;
         }
 
-        if (!confirm(`Deseja excluir os ${checkboxes.length} itens selecionados?`)) {
+        if (!confirm(`Deseja excluir as ${checkboxes.length} notas selecionadas?`)) {
             return;
         }
 
-        try {
-            let batch = db.batch();
-            let contador = 0;
+        if (usandoFirebase) {
+            try {
+                let batch = db.batch();
+                let contador = 0;
 
-            checkboxes.forEach((cb) => {
-                const docRef = db.collection("notas_recebidas_almoxarifado").doc(cb.value);
-                batch.delete(docRef);
-                contador++;
-            });
+                checkboxes.forEach((cb) => {
+                    const docRef = db.collection("notas_recebidas_almoxarifado").doc(cb.value);
+                    batch.delete(docRef);
+                    contador++;
+                });
 
-            await batch.commit();
-            alert(`${contador} itens excluídos com sucesso!`);
-        } catch (erro) {
-            alert("Erro ao excluir itens. Tente novamente.");
-            console.error(erro);
+                await batch.commit();
+                alert(`${contador} notas excluídas com sucesso!`);
+            } catch (erro) {
+                alert("Erro ao excluir notas. Tente novamente.");
+                console.error(erro);
+            }
+        } else {
+            const idsParaExcluir = Array.from(checkboxes).map(cb => cb.value);
+            dadosNotas = dadosNotas.filter(item => !idsParaExcluir.includes(item.idDoc));
+            salvarDadosLocais();
+            renderizarTabelaPrincipal();
+            atualizarDashboard();
+            renderizarRelatorio();
+            atualizarSelectFornecedoresRelatorio();
+            alert("Notas excluídas com sucesso!");
         }
-    }
-
-    function gerarPDFRelatorio() {
-        const filtrados = obterNotasFiltradasRelatorio();
-        if (filtrados.length === 0) {
-            alert("Não há dados para gerar o relatório em PDF com os filtros selecionados.");
-            return;
-        }
-        executarImpressaoPDF(filtrados, "Relatório Geral (Filtrado)");
-    }
-
-    function gerarPDFSelecionados() {
-        const checkboxes = document.querySelectorAll('.check-relatorio:checked');
-        if (checkboxes.length === 0) {
-            alert("Nenhum item selecionado na tabela de relatório para impressão.");
-            return;
-        }
-        const idsSelecionados = Array.from(checkboxes).map(cb => cb.value);
-        const selecionados = dadosNotas.filter(item => idsSelecionados.includes(item.idDoc));
-        executarImpressaoPDF(selecionados, "Relatório de Itens Selecionados");
-    }
-
-    function executarImpressaoPDF(listaItens, tituloPeriodo) {
-        const periodoPdf = document.getElementById('pdfPeriodoRelatorio');
-        const pdfTbody = document.getElementById('pdfCorpoRelatorio');
-        const somaTotalEl = document.getElementById('pdfSomaTotalGeral');
-
-        const dataCompVal = document.getElementById('filtroDataCompleta').value;
-        const mesVal = document.getElementById('filtroMesRelatorio').value;
-        const fornVal = document.getElementById('filtroFornecedorRelatorio').value;
-
-        let textoInfo = tituloPeriodo;
-        if (dataCompVal) textoInfo += ` | Data: ${dataCompVal}`;
-        else if (mesVal) textoInfo += ` | Mês: ${mesVal}`;
-        if (fornVal) textoInfo += ` | Fornecedor: ${fornVal}`;
-
-        periodoPdf.textContent = textoInfo;
-
-        pdfTbody.innerHTML = '';
-        let somaGeral = 0;
-
-        listaItens.forEach(item => {
-            const totalCalc = parseFloat(calcularTotal(item.qtdRecebida, item.valorUnitario));
-            somaGeral += totalCalc;
-
-            const unitFormatado = parseFloat(String(item.valorUnitario || '0').replace(/\./g, '').replace(',', '.')).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            const totalFormatado = totalCalc.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; font-size: 11px; text-align: center; font-weight: bold;">${item.numeroNota || ''}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; font-size: 11px;">${item.fornecedor || ''}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; font-size: 11px;">${item.item || ''}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; font-size: 11px; text-align: center;">${item.dataRecebimento || ''}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; font-size: 11px; text-align: center;"><b>${item.qtdRecebida || ''}</b></td>
-                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; font-size: 11px; text-align: right;">R$ ${unitFormatado}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; font-size: 11px; text-align: right; font-weight: bold;">R$ ${totalFormatado}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; font-size: 11px;">${item.conferente || ''}</td>
-            `;
-            pdfTbody.appendChild(tr);
-        });
-
-        somaTotalEl.textContent = `VALOR TOTAL GERAL: R$ ${somaGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-        const docDiv = document.getElementById('docRelatorioPDF');
-        docDiv.style.display = 'block';
-        window.print();
-        docDiv.style.display = 'none';
     }
 
     function fazerBackup() {
-        if (dadosNotas.length === 0) {
-            alert("Não há dados para exportar.");
-            return;
-        }
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dadosNotas, null, 2));
-        const downloadAnchor = document.createElement('a');
-        downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `backup_notas_almoxarifado_${new Date().toISOString().slice(0,10)}.json`);
-        document.body.appendChild(downloadAnchor);
-        downloadAnchor.click();
-        downloadAnchor.remove();
+        const dadosJson = JSON.stringify(dadosNotas, null, 2);
+        const blob = new Blob([dadosJson], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `backup_notas_almoxarifado_${new Date().toISOString().slice(0,10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 
     async function restaurarBackup(event) {
         const arquivo = event.target.files[0];
         if (!arquivo) return;
 
-        if (!confirm("Atenção: Restaurar um backup irá importar as notas do arquivo para o seu banco de dados atual. Deseja continuar?")) {
-            event.target.value = '';
-            return;
-        }
-
         const leitor = new FileReader();
         leitor.onload = async function(e) {
             try {
-                const dadosRestaurar = JSON.parse(e.target.result);
-                if (!Array.isArray(dadosRestaurar)) {
-                    alert("O arquivo JSON de backup é inválido.");
+                const notasRestauradas = JSON.parse(e.target.result);
+                if (!Array.isArray(notasRestauradas)) {
+                    alert("O arquivo de backup é inválido.");
                     return;
                 }
 
-                let batch = db.batch();
-                let contador = 0;
-
-                for (let item of dadosRestaurar) {
-                    const novoRef = db.collection("notas_recebidas_almoxarifado").doc();
-                    const copia = { ...item };
-                    delete copia.idDoc;
-                    batch.set(novoRef, copia);
-                    contador++;
+                if (!confirm(`Atenção: Isso irá importar ${notasRestauradas.length} notas. Deseja continuar?`)) {
+                    return;
                 }
 
-                await batch.commit();
-                alert(`${contador} itens restaurados com sucesso para o Firebase!`);
-            } catch (err) {
-                alert("Erro ao ler ou processar o arquivo de backup.");
-                console.error(err);
-            } finally {
-                event.target.value = '';
+                if (usandoFirebase) {
+                    let batch = db.batch();
+                    let contador = 0;
+
+                    notasRestauradas.forEach(nota => {
+                        const novoDocRef = db.collection("notas_recebidas_almoxarifado").doc();
+                        const dadosParaSalvar = { ...nota };
+                        delete dadosParaSalvar.idDoc;
+                        dadosParaSalvar.criadoEm = firebase.firestore.FieldValue.serverTimestamp();
+                        batch.set(novoDocRef, dadosParaSalvar);
+                        contador++;
+                    });
+
+                    await batch.commit();
+                    alert(`Backup restaurado com sucesso! ${contador} registros adicionados.`);
+                } else {
+                    notasRestauradas.forEach(nota => {
+                        if (!nota.idDoc) nota.idDoc = 'local_' + Math.random();
+                        dadosNotas.push(nota);
+                    });
+                    salvarDadosLocais();
+                    renderizarTabelaPrincipal();
+                    atualizarDashboard();
+                    renderizarRelatorio();
+                    atualizarSelectFornecedoresRelatorio();
+                    alert(`Backup restaurado com sucesso localmente!`);
+                }
+                document.getElementById('arquivoBackup').value = '';
+            } catch (erro) {
+                alert("Erro ao processar o arquivo JSON de backup.");
+                console.error(erro);
             }
         };
         leitor.readAsText(arquivo);
     }
 </script>
+
+</body>
 </html>
