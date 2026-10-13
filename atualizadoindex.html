@@ -485,7 +485,6 @@
 
     const db = firebase.firestore();
 
-    let usandoFirebase = true;
     let dadosNotas = [];
 
     document.addEventListener("DOMContentLoaded", function() {
@@ -503,7 +502,6 @@
                 dadosNotas.push({ idDoc: doc.id, ...doc.data() });
             });
             
-            usandoFirebase = true;
             statusEl.innerText = "☁️ Conectado à Nuvem (Firebase Sincronizado)";
             statusEl.style.background = "#d1fae5";
             statusEl.style.color = "#065f46";
@@ -513,31 +511,12 @@
             renderizarRelatorio();
             atualizarSelectFornecedoresRelatorio();
         }, (error) => {
-            // Fallback automático para modo local se o navegador bloquear o arquivo file://
-            usandoFirebase = false;
-            statusEl.innerText = "⚠️ Modo Local Ativo (Salvando no Navegador - file:// bloqueado)";
-            statusEl.style.background = "#fef3c7";
-            statusEl.style.color = "#92400e";
-            carregarDadosLocais();
+            statusEl.innerText = "⚠️ Erro de conexão com o Firebase";
+            statusEl.style.background = "#fee2e2";
+            statusEl.style.color = "#991b1b";
+            console.error("Erro: ", error);
         });
     });
-
-    function carregarDadosLocais() {
-        const salvos = localStorage.getItem('dados_notas_almoxarifado_local');
-        if (salvos) {
-            dadosNotas = JSON.parse(salvos);
-        } else {
-            dadosNotas = [];
-        }
-        renderizarTabelaPrincipal();
-        atualizarDashboard();
-        renderizarRelatorio();
-        atualizarSelectFornecedoresRelatorio();
-    }
-
-    function salvarDadosLocais() {
-        localStorage.setItem('dados_notas_almoxarifado_local', JSON.stringify(dadosNotas));
-    }
 
     function mudarAba(abaId) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -571,37 +550,14 @@
             qtdRecebida: "1",
             valorUnitario: "0,00",
             conferente: "",
-            criadoEm: new Date().toISOString()
+            criadoEm: firebase.firestore.FieldValue.serverTimestamp()
         };
-
-        if (usandoFirebase) {
-            db.collection("notas_recebidas_almoxarifado").add({
-                ...novaItem,
-                criadoEm: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        } else {
-            novaItem.idDoc = 'local_' + Date.now();
-            dadosNotas.unshift(novaItem);
-            salvarDadosLocais();
-            renderizarTabelaPrincipal();
-            atualizarDashboard();
-            renderizarRelatorio();
-            atualizarSelectFornecedoresRelatorio();
-        }
+        db.collection("notas_recebidas_almoxarifado").add(novaItem);
     }
 
-    async function excluirNota(idDoc) {
+    function excluirNota(idDoc) {
         if (confirm("Deseja excluir esta nota registrada?")) {
-            if (usandoFirebase) {
-                db.collection("notas_recebidas_almoxarifado").doc(idDoc).delete();
-            } else {
-                dadosNotas = dadosNotas.filter(item => item.idDoc !== idDoc);
-                salvarDadosLocais();
-                renderizarTabelaPrincipal();
-                atualizarDashboard();
-                renderizarRelatorio();
-                atualizarSelectFornecedoresRelatorio();
-            }
+            db.collection("notas_recebidas_almoxarifado").doc(idDoc).delete();
         }
     }
 
@@ -611,17 +567,7 @@
         } else if (campo === 'numeroNota') {
             valor = formatarNumeroNota(valor);
         }
-
-        if (usandoFirebase) {
-            db.collection("notas_recebidas_almoxarifado").doc(idDoc).update({ [campo]: valor });
-        } else {
-            const item = dadosNotas.find(i => i.idDoc === idDoc);
-            if (item) {
-                item[campo] = valor;
-                salvarDadosLocais();
-                atualizarDashboard();
-            }
-        }
+        db.collection("notas_recebidas_almoxarifado").doc(idDoc).update({ [campo]: valor });
     }
 
     function formatarNumeroNota(texto) {
@@ -810,32 +756,21 @@
             return;
         }
 
-        if (usandoFirebase) {
-            try {
-                let batch = db.batch();
-                let contador = 0;
+        try {
+            let batch = db.batch();
+            let contador = 0;
 
-                checkboxes.forEach((cb) => {
-                    const docRef = db.collection("notas_recebidas_almoxarifado").doc(cb.value);
-                    batch.delete(docRef);
-                    contador++;
-                });
+            checkboxes.forEach((cb) => {
+                const docRef = db.collection("notas_recebidas_almoxarifado").doc(cb.value);
+                batch.delete(docRef);
+                contador++;
+            });
 
-                await batch.commit();
-                alert(`${contador} notas excluídas com sucesso!`);
-            } catch (erro) {
-                alert("Erro ao excluir notas. Tente novamente.");
-                console.error(erro);
-            }
-        } else {
-            const idsParaExcluir = Array.from(checkboxes).map(cb => cb.value);
-            dadosNotas = dadosNotas.filter(item => !idsParaExcluir.includes(item.idDoc));
-            salvarDadosLocais();
-            renderizarTabelaPrincipal();
-            atualizarDashboard();
-            renderizarRelatorio();
-            atualizarSelectFornecedoresRelatorio();
-            alert("Notas excluídas com sucesso!");
+            await batch.commit();
+            alert(`${contador} notas excluídas com sucesso!`);
+        } catch (erro) {
+            alert("Erro ao excluir notas. Tente novamente.");
+            console.error(erro);
         }
     }
 
@@ -986,32 +921,21 @@
             return;
         }
 
-        if (usandoFirebase) {
-            try {
-                let batch = db.batch();
-                let contador = 0;
+        try {
+            let batch = db.batch();
+            let contador = 0;
 
-                checkboxes.forEach((cb) => {
-                    const docRef = db.collection("notas_recebidas_almoxarifado").doc(cb.value);
-                    batch.delete(docRef);
-                    contador++;
-                });
+            checkboxes.forEach((cb) => {
+                const docRef = db.collection("notas_recebidas_almoxarifado").doc(cb.value);
+                batch.delete(docRef);
+                contador++;
+            });
 
-                await batch.commit();
-                alert(`${contador} notas excluídas com sucesso!`);
-            } catch (erro) {
-                alert("Erro ao excluir notas. Tente novamente.");
-                console.error(erro);
-            }
-        } else {
-            const idsParaExcluir = Array.from(checkboxes).map(cb => cb.value);
-            dadosNotas = dadosNotas.filter(item => !idsParaExcluir.includes(item.idDoc));
-            salvarDadosLocais();
-            renderizarTabelaPrincipal();
-            atualizarDashboard();
-            renderizarRelatorio();
-            atualizarSelectFornecedoresRelatorio();
-            alert("Notas excluídas com sucesso!");
+            await batch.commit();
+            alert(`${contador} notas excluídas com sucesso!`);
+        } catch (erro) {
+            alert("Erro ao excluir notas. Tente novamente.");
+            console.error(erro);
         }
     }
 
@@ -1041,37 +965,24 @@
                     return;
                 }
 
-                if (!confirm(`Atenção: Isso irá importar ${notasRestauradas.length} notas. Deseja continuar?`)) {
+                if (!confirm(`Atenção: Isso irá importar ${notasRestauradas.length} notas para a nuvem. Deseja continuar?`)) {
                     return;
                 }
 
-                if (usandoFirebase) {
-                    let batch = db.batch();
-                    let contador = 0;
+                let batch = db.batch();
+                let contador = 0;
 
-                    notasRestauradas.forEach(nota => {
-                        const novoDocRef = db.collection("notas_recebidas_almoxarifado").doc();
-                        const dadosParaSalvar = { ...nota };
-                        delete dadosParaSalvar.idDoc;
-                        dadosParaSalvar.criadoEm = firebase.firestore.FieldValue.serverTimestamp();
-                        batch.set(novoDocRef, dadosParaSalvar);
-                        contador++;
-                    });
+                notasRestauradas.forEach(nota => {
+                    const novoDocRef = db.collection("notas_recebidas_almoxarifado").doc();
+                    const dadosParaSalvar = { ...nota };
+                    delete dadosParaSalvar.idDoc;
+                    dadosParaSalvar.criadoEm = firebase.firestore.FieldValue.serverTimestamp();
+                    batch.set(novoDocRef, dadosParaSalvar);
+                    contador++;
+                });
 
-                    await batch.commit();
-                    alert(`Backup restaurado com sucesso! ${contador} registros adicionados.`);
-                } else {
-                    notasRestauradas.forEach(nota => {
-                        if (!nota.idDoc) nota.idDoc = 'local_' + Math.random();
-                        dadosNotas.push(nota);
-                    });
-                    salvarDadosLocais();
-                    renderizarTabelaPrincipal();
-                    atualizarDashboard();
-                    renderizarRelatorio();
-                    atualizarSelectFornecedoresRelatorio();
-                    alert(`Backup restaurado com sucesso localmente!`);
-                }
+                await batch.commit();
+                alert(`Backup restaurado com sucesso! ${contador} registros adicionados.`);
                 document.getElementById('arquivoBackup').value = '';
             } catch (erro) {
                 alert("Erro ao processar o arquivo JSON de backup.");
