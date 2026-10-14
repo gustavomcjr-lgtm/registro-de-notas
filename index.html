@@ -3,109 +3,465 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ELOSCIENTIFIC - Gestão de Estoque</title>
-    
-    <!-- Bibliotecas do Firebase (SDK Compatível - Estável para GitHub Pages) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-
+    <title>Notas Recebidas Almoxarifado - ELOSCIENTIFIC</title>
+    <!-- SDK do Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <style>
+        :root {
+            --primary-color: #0f172a;
+            --secondary-color: #2563eb;
+            --accent-color: #3b82f6;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --border-color: #e2e8f0;
+            --editable-bg: #fefce8;
+            --editable-border: #facc15;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f4f6f9;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 25px;
         }
+
         .container {
-            max-width: 1000px;
-            margin: auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 1500px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+            border: 1px solid var(--border-color);
         }
-        .status-bar {
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 5px;
-            font-weight: bold;
-            text-align: center;
-            background-color: #ffeeba;
-            color: #856404;
+
+        h1 {
+            color: var(--primary-color);
+            margin: 0 0 5px 0;
+            font-size: 26px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
-        .status-online {
-            background-color: #d4edda;
-            color: #155724;
+
+        #statusNuvem {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: #e2e8f0;
+            color: #475569;
+            display: inline-block;
+            margin-bottom: 22px;
+            letter-spacing: 0.3px;
         }
-        form {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+
+        .tabs {
+            display: flex;
             gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 12px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background-color: #f1f5f9;
+            color: #64748b;
+            border: 1px solid var(--border-color);
+            padding: 11px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.25s ease;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            background-color: #e2e8f0;
+            color: var(--primary-color);
+        }
+
+        .tab-btn.active {
+            background-color: var(--secondary-color);
+            color: white;
+            border-color: var(--secondary-color);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            background: linear-gradient(135deg, #ffffff, #f8fafc);
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            border-left: 6px solid var(--secondary-color);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+        }
+
+        .card.success { border-left-color: #10b981; }
+        .card.purple { border-left-color: #8b5cf6; }
+
+        .card h3 {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card p {
+            margin: 12px 0 0 0;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .toolbar, .filter-row, .report-box {
+            background: #f8fafc;
+            padding: 18px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
             margin-bottom: 20px;
         }
-        input, button {
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+
+        .filter-row { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 14px; 
+            align-items: center; 
         }
+
+        .report-box { max-width: 1000px; }
+
         button {
-            grid-column: span 2;
-            background-color: #0056b3;
+            background-color: var(--secondary-color);
             color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
             cursor: pointer;
-            font-weight: bold;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
         }
-        button:hover {
-            background-color: #003d80;
+
+        button:hover { background-color: #1d4ed8; transform: translateY(-1px); }
+
+        .btn-success { background-color: #10b981; }
+        .btn-success:hover { background-color: #059669; }
+
+        .btn-danger { background-color: #ef4444; }
+        .btn-danger:hover { background-color: #dc2626; }
+
+        .btn-warning { background-color: #f59e0b; color: white; }
+        .btn-warning:hover { background-color: #d97706; }
+
+        .btn-purple { background-color: #8b5cf6; color: white; }
+        .btn-purple:hover { background-color: #7c3aed; }
+
+        select, input[type="date"], input[type="text"], input[type="month"], textarea {
+            padding: 10px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            background: white;
+            color: var(--text-color);
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
+
+        select:focus, input:focus, textarea:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
         }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 10px;
-            text-align: left;
+
+        input[type="text"] { min-width: 170px; }
+
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; background: white; }
+
         th {
-            background-color: #0056b3;
+            background-color: var(--primary-color);
             color: white;
+            padding: 14px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+            color: var(--text-color);
+            vertical-align: middle;
+        }
+
+        tr:hover { background-color: #f8fafc; }
+
+        [contenteditable="true"] {
+            background-color: var(--editable-bg) !important;
+            border: 1px dashed var(--editable-border) !important;
+            padding: 8px 10px;
+            border-radius: 6px;
+            outline: none;
+            width: 100%;
+            box-sizing: border-box;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+
+        [contenteditable="true"]:focus {
+            background-color: #ffffff !important;
+            border-color: var(--secondary-color) !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            display: inline-block;
+            text-align: center;
+        }
+        .status-recebido { background: #d1fae5; color: #047857; border: 1px solid #a7f3d0; }
+
+        .actions-cell { text-align: center; width: 70px; }
+        .checkbox-cell { text-align: center; width: 40px; }
+        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+
+        #docRelatorioPDF {
+            display: none;
+            background: white;
+            padding: 40px;
+            font-family: 'Inter', sans-serif;
+            color: #0f172a;
+        }
+
+        @media print {
+            body { background: white; padding: 0; color: black; }
+            .container > *:not(#aba-relatorio) { display: none !important; }
+            #aba-relatorio > *:not(#docRelatorioPDF) { display: none !important; }
+            #docRelatorioPDF { display: block !important; width: 100%; }
+            .tabs, .toolbar, .filter-row, .report-box, .actions-cell, .checkbox-cell, #statusNuvem { display: none !important; }
+            table, th, td { border: 1px solid #cbd5e1; color: #0f172a; }
+            th { background-color: #0f172a !important; color: white !important; -webkit-print-color-adjust: exact; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>ELOSCIENTIFIC - Sistema de Controle e Sincronização</h2>
-    <div id="statusConexao" class="status-bar">Conectando à nuvem...</div>
+    <h1>📦 Notas Recebidas Almoxarifado</h1>
+    <div id="statusNuvem">Iniciando sistema...</div>
 
-    <!-- Formulário de Cadastro -->
-    <form id="formNota">
-        <input type="text" id="numNota" placeholder="Número da Nota" required>
-        <input type="text" id="fornecedor" placeholder="Fornecedor / Descrição" required>
-        <button type="submit">Salvar Nota na Nuvem</button>
-    </form>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="mudarAba('notas')">📋 Gestão de Notas</button>
+        <button class="tab-btn" onclick="mudarAba('dashboard')">📊 Dashboard</button>
+        <button class="tab-btn" onclick="mudarAba('relatorio')">📑 Relatório Mensal & PDF</button>
+        <button class="tab-btn" onclick="mudarAba('backup')">💾 Backup / Restaurar</button>
+    </div>
 
-    <!-- Tabela de Registros Realtime -->
-    <h3>Notas Salvas em Tempo Real</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>Número da Nota</th>
-                <th>Fornecedor / Descrição</th>
-                <th>Data de Registro</th>
-            </tr>
-        </thead>
-        <tbody id="tabelaDados">
-            <tr>
-                <td colspan="3" style="text-align:center;">Carregando dados...</td>
-            </tr>
-        </tbody>
-    </table>
+    <!-- ABA 1: GESTÃO DE NOTAS -->
+    <div id="aba-notas" class="tab-content active">
+        <div class="toolbar">
+            <button class="btn-success" onclick="adicionarNota()">➕ Nova Nota</button>
+            <button class="btn-danger" onclick="excluirSelecionadosPrincipal()">🗑️ Excluir Selecionadas</button>
+        </div>
+
+        <div class="filter-row">
+            <div style="font-weight: 600; color: var(--primary-color);">🔍 Filtros:</div>
+            <div><input type="text" id="filtroNota" placeholder="Nº da Nota..." oninput="renderizarTabelaPrincipal()"></div>
+            <div><input type="text" id="filtroFornecedor" placeholder="Fornecedor..." oninput="renderizarTabelaPrincipal()"></div>
+            <div><input type="text" id="filtroItem" placeholder="Item / Produto..." oninput="renderizarTabelaPrincipal()"></div>
+            <button onclick="limparFiltrosPrincipal()" style="background-color: #64748b;">Limpar</button>
+        </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="checkbox-cell"><input type="checkbox" id="selectAllPrincipal" onclick="toggleSelectAllPrincipal(this)"></th>
+                        <th>Nº da Nota</th>
+                        <th>Fornecedor</th>
+                        <th>Item / Produto</th>
+                        <th>Data Recebimento</th>
+                        <th>Qtd Recebida</th>
+                        <th>Valor Unitário (R$)</th>
+                        <th>Valor Total (R$)</th>
+                        <th>Conferente</th>
+                        <th>Status</th>
+                        <th class="actions-cell">Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoTabela">
+                    <tr><td colspan="11" style="text-align: center; color: #64748b; padding: 25px;">Carregando dados...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ABA 2: DASHBOARD -->
+    <div id="aba-dashboard" class="tab-content">
+        <h2>Painel de Indicadores</h2>
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3>Total de Notas Registradas</h3>
+                <p id="statTotalNotas">0</p>
+            </div>
+            <div class="card success">
+                <h3>Valor Total Acumulado</h3>
+                <p id="statValorTotal">R$ 0,00</p>
+            </div>
+            <div class="card purple">
+                <h3>Fornecedores Cadastrados</h3>
+                <p id="statFornecedores">0</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ABA 3: RELATÓRIO MENSAL & PDF -->
+    <div id="aba-relatorio" class="tab-content">
+        <h2>Relatório Mensal de Recebimento</h2>
+        <div class="report-box">
+            <p style="color: #64748b; margin-top: 0; line-height: 1.4;">Filtre o relatório por data completa (ex: 30/setembro/2026), por mês ou por fornecedor específico e imprima apenas os itens selecionados.</p>
+            
+            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
+                <div>
+                    <label style="font-weight: 600; display: block; margin-bottom: 5px;">Data Específica:</label>
+                    <input type="text" id="filtroDataCompleta" placeholder="Ex: 30/09/2026 ou 30/setembro/2026" style="padding: 9px 12px; width: 250px;" oninput="renderizarRelatorio()">
+                </div>
+                <div>
+                    <label style="font-weight: 600; display: block; margin-bottom: 5px;">Mês do Relatório:</label>
+                    <input type="month" id="filtroMesRelatorio" style="padding: 9px 12px;" onchange="renderizarRelatorio()">
+                </div>
+                <div>
+                    <label style="font-weight: 600; display: block; margin-bottom: 5px;">Filtrar Fornecedor:</label>
+                    <select id="filtroFornecedorRelatorio" onchange="renderizarRelatorio()" style="min-width: 220px;">
+                        <option value="">-- Todos os Fornecedores --</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px; align-self: flex-end; flex-wrap: wrap;">
+                    <button class="btn-warning" onclick="gerarPDFRelatorio()">📄 Gerar PDF (Todos filtrados)</button>
+                    <button class="btn-success" onclick="gerarPDFSelecionados()">🖨️ Imprimir Apenas Selecionados</button>
+                    <button class="btn-danger" onclick="excluirSelecionadosRelatorio()">🗑️ Excluir Selecionadas</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="checkbox-cell"><input type="checkbox" id="selectAllRelatorio" onclick="toggleSelectAllRelatorio(this)"></th>
+                        <th>Nº da Nota</th>
+                        <th>Fornecedor</th>
+                        <th>Item / Produto</th>
+                        <th>Data Recebimento</th>
+                        <th>Qtd Recebida</th>
+                        <th>Valor Unitário</th>
+                        <th>Valor Total</th>
+                        <th>Conferente</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoTabelaRelatorio">
+                    <tr><td colspan="9" style="text-align: center; color: #64748b; padding: 25px;">Nenhum registro encontrado.</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ESTRUTURA OCULTA PARA PDF OTIMIZADO -->
+        <div id="docRelatorioPDF">
+            <div style="border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h2 style="margin: 0; color: #0f172a; font-size: 20px;">ELOSCIENTIFIC</h2>
+                    <p style="margin: 4px 0; font-size: 12px; color: #475569;">CNPJ: 44.841.520/0001-00</p>
+                    <p style="margin: 4px 0; font-size: 12px; color: #475569;">Endereço: Rua Guilherme de Carvalho Whitaker, 276 – Jd. Bongiovani – Presidente Prudente/SP</p>
+                </div>
+                <div style="text-align: right;">
+                    <h3 style="margin: 0; color: #2563eb; font-size: 15px;">RELATÓRIO DE RECEBIMENTO DE MERCADORIA ELOSCIENTIFIC</h3>
+                    <p style="margin: 4px 0; font-size: 12px; color: #475569;" id="pdfPeriodoRelatorio"></p>
+                </div>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
+                <thead>
+                    <tr style="background: #0f172a; color: white;">
+                        <th style="padding: 10px; font-size: 11px; text-align: center;">Nº Nota</th>
+                        <th style="padding: 10px; font-size: 11px; text-align: left;">Fornecedor</th>
+                        <th style="padding: 10px; font-size: 11px; text-align: left;">Item / Produto</th>
+                        <th style="padding: 10px; font-size: 11px; text-align: center;">Data</th>
+                        <th style="padding: 10px; font-size: 11px; text-align: center;">Qtd</th>
+                        <th style="padding: 10px; font-size: 11px; text-align: right;">V. Unit.</th>
+                        <th style="padding: 10px; font-size: 11px; text-align: right;">V. Total</th>
+                        <th style="padding: 10px; font-size: 11px; text-align: left;">Conferente</th>
+                    </tr>
+                </thead>
+                <tbody id="pdfCorpoRelatorio"></tbody>
+            </table>
+
+            <div style="text-align: right; margin-bottom: 40px; font-size: 16px; font-weight: bold; color: #0f172a;" id="pdfSomaTotalGeral"></div>
+
+            <div style="margin-top: 50px; display: flex; justify-content: space-between;">
+                <div style="border-top: 1px solid #94a3b8; width: 250px; text-align: center; padding-top: 6px; font-size: 12px; color: #475569;">Responsável Almoxarifado</div>
+                <div style="border-top: 1px solid #94a3b8; width: 250px; text-align: center; padding-top: 6px; font-size: 12px; color: #475569;">Diretoria / Gestão</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ABA 4: BACKUP E RESTAURADOR -->
+    <div id="aba-backup" class="tab-content">
+        <h2>Gerenciamento de Backup</h2>
+        <div class="report-box" style="max-width: 650px;">
+            <p style="color: #64748b; margin-top: 0; line-height: 1.5;">Baixe um arquivo de segurança contendo todas as suas notas registradas na nuvem ou restaure seus dados a partir de um arquivo JSON anterior.</p>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 25px;">
+                <button class="btn-success" onclick="fazerBackup()">📥 Baixar Backup (JSON)</button>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="file" id="arquivoBackup" accept=".json" style="display: none;" onchange="restaurarBackup(event)">
+                    <button class="btn-purple" onclick="document.getElementById('arquivoBackup').click()">📤 Restaurar Backup</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
-    // 1. Configuração Oficial das Credenciais do Firebase
     var firebaseConfig = {
         apiKey: "AIzaSyB_stAqlEz81bKnAWk1LPqoU9v6W6TVuo8",
         authDomain: "notas-3a3b1.firebaseapp.com",
@@ -115,66 +471,590 @@
         appId: "1:212629270963:web:0396cf8cb2434d5f935bc6"
     };
 
-    // 2. Inicialização Segura do Firebase
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
 
-    // 3. Conexão ao Firestore
     var db = firebase.firestore();
+    var usandoFirebase = true;
+    var dadosNotas = [];
 
-    // Referências do HTML
-    var statusConexao = document.getElementById("statusConexao");
-    var formNota = document.getElementById("formNota");
-    var tabelaDados = document.getElementById("tabelaDados");
+    document.addEventListener("DOMContentLoaded", function() {
+        var statusEl = document.getElementById('statusNuvem');
+        
+        var hoje = new Date();
+        var anoAtual = hoje.getFullYear();
+        var mesAtual = String(hoje.getMonth() + 1).padStart(2, '0');
+        var inputMes = document.getElementById('filtroMesRelatorio');
+        if (inputMes) inputMes.value = anoAtual + '-' + mesAtual;
 
-    // 4. Escuta em Tempo Real (Sincroniza entre múltiplos computadores)
-    db.collection("notas").onSnapshot(function(snapshot) {
-        statusConexao.textContent = "✓ Conectado e Sincronizado em Tempo Real";
-        statusConexao.className = "status-bar status-online";
+        try {
+            db.collection("notas_recebidas_almoxarifado").orderBy("criadoEm", "desc").onSnapshot(function(snapshot) {
+                dadosNotas = [];
+                snapshot.forEach(function(doc) {
+                    dadosNotas.push(Object.assign({ idDoc: doc.id }, doc.data()));
+                });
+                
+                usandoFirebase = true;
+                if (statusEl) {
+                    statusEl.innerText = "☁️ Conectado à Nuvem (Firebase Sincronizado)";
+                    statusEl.style.background = "#d1fae5";
+                    statusEl.style.color = "#065f46";
+                }
+                
+                renderizarTabelaPrincipal();
+                atualizarDashboard();
+                renderizarRelatorio();
+                atualizarSelectFornecedoresRelatorio();
+            }, function(error) {
+                usandoFirebase = false;
+                if (statusEl) {
+                    statusEl.innerText = "⚠️ Modo Local Ativo (Salvando no Navegador)";
+                    statusEl.style.background = "#fef3c7";
+                    statusEl.style.color = "#92400e";
+                }
+                carregarDadosLocais();
+            });
+        } catch(e) {
+            usandoFirebase = false;
+            if (statusEl) {
+                statusEl.innerText = "⚠️ Modo Local Ativo";
+                statusEl.style.background = "#fef3c7";
+                statusEl.style.color = "#92400e";
+            }
+            carregarDadosLocais();
+        }
+    });
 
-        tabelaDados.innerHTML = ""; // Limpa a tabela antes de recarregar
+    function carregarDadosLocais() {
+        var salvos = localStorage.getItem('dados_notas_almoxarifado_local');
+        if (salvos) {
+            dadosNotas = JSON.parse(salvos);
+        } else {
+            dadosNotas = [];
+        }
+        renderizarTabelaPrincipal();
+        atualizarDashboard();
+        renderizarRelatorio();
+        atualizarSelectFornecedoresRelatorio();
+    }
 
-        if (snapshot.empty) {
-            tabelaDados.innerHTML = '<tr><td colspan="3" style="text-align:center;">Nenhuma nota cadastrada.</td></tr>';
+    function salvarDadosLocais() {
+        localStorage.setItem('dados_notas_almoxarifado_local', JSON.stringify(dadosNotas));
+    }
+
+    function mudarAba(abaId) {
+        document.querySelectorAll('.tab-btn').forEach(function(btn) { btn.classList.remove('active'); });
+        document.querySelectorAll('.tab-content').forEach(function(content) { content.classList.remove('active'); });
+
+        var mapaAbas = {
+            'notas': 1,
+            'dashboard': 2,
+            'relatorio': 3,
+            'backup': 4
+        };
+
+        var targetBtn = document.querySelector('.tabs button:nth-child(' + mapaAbas[abaId] + ')');
+        var targetContent = document.getElementById('aba-' + abaId);
+        
+        if (targetBtn) targetBtn.classList.add('active');
+        if (targetContent) targetContent.classList.add('active');
+        
+        if (abaId === 'relatorio') renderizarRelatorio();
+        if (abaId === 'dashboard') atualizarDashboard();
+    }
+
+    function adicionarNota() {
+        var hoje = new Date();
+        var dia = String(hoje.getDate()).padStart(2, '0');
+        var mes = String(hoje.getMonth() + 1).padStart(2, '0');
+        var ano = hoje.getFullYear();
+
+        var novaItem = {
+            numeroNota: "",
+            fornecedor: "",
+            item: "",
+            dataRecebimento: dia + '/' + mes + '/' + ano,
+            qtdRecebida: "1",
+            valorUnitario: "0,00",
+            conferente: ""
+        };
+
+        if (usandoFirebase) {
+            db.collection("notas_recebidas_almoxarifado").add(Object.assign({}, novaItem, {
+                criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+            }));
+        } else {
+            novaItem.idDoc = 'local_' + Date.now();
+            novaItem.criadoEm = new Date().toISOString();
+            dadosNotas.unshift(novaItem);
+            salvarDadosLocais();
+            renderizarTabelaPrincipal();
+            atualizarDashboard();
+            renderizarRelatorio();
+            atualizarSelectFornecedoresRelatorio();
+        }
+    }
+
+    function excluirNota(idDoc) {
+        if (confirm("Deseja excluir esta nota registrada?")) {
+            if (usandoFirebase) {
+                db.collection("notas_recebidas_almoxarifado").doc(idDoc).delete();
+            } else {
+                dadosNotas = dadosNotas.filter(function(item) { return item.idDoc !== idDoc; });
+                salvarDadosLocais();
+                renderizarTabelaPrincipal();
+                atualizarDashboard();
+                renderizarRelatorio();
+                atualizarSelectFornecedoresRelatorio();
+            }
+        }
+    }
+
+    function atualizarCampo(idDoc, campo, valor) {
+        if (campo === 'valorUnitario') {
+            valor = formatarMoedaInput(valor);
+        } else if (campo === 'numeroNota') {
+            valor = formatarNumeroNota(valor);
+        }
+
+        if (usandoFirebase) {
+            var obj = {};
+            obj[campo] = valor;
+            db.collection("notas_recebidas_almoxarifado").doc(idDoc).update(obj);
+        } else {
+            var item = dadosNotas.find(function(i) { return i.idDoc === idDoc; });
+            if (item) {
+                item[campo] = valor;
+                salvarDadosLocais();
+                atualizarDashboard();
+            }
+        }
+    }
+
+    function formatarNumeroNota(texto) {
+        var apenasNumeros = texto.replace(/\D/g, '');
+        if (!apenasNumeros) return "";
+        return apenasNumeros.padStart(9, '0');
+    }
+
+    function formatarMoedaInput(texto) {
+        var apenasNumeros = texto.replace(/\D/g, '');
+        if (!apenasNumeros) return "0,00";
+        var numero = parseFloat(apenasNumeros) / 100;
+        return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function calcularTotal(qtd, unitario) {
+        var q = parseFloat(qtd) || 0;
+        var uStr = String(unitario || '0').replace('R$', '').trim();
+        uStr = uStr.replace(/\./g, '').replace(',', '.');
+        var u = parseFloat(uStr) || 0;
+        return (q * u).toFixed(2);
+    }
+
+    function normalizarTextoData(texto) {
+        if (!texto) return '';
+        var mapaMeses = {
+            'janeiro': '01', 'fevereiro': '02', 'marco': '03', 'março': '03',
+            'abril': '04', 'maio': '05', 'junho': '06', 'julho': '07',
+            'agosto': '08', 'setembro': '09', 'outubro': '10', 'novembro': '11', 'dezembro': '12'
+        };
+        var t = texto.toLowerCase().trim();
+        for (var mesNome in mapaMeses) {
+            t = t.replace(mesNome, mapaMeses[mesNome]);
+        }
+        return t;
+    }
+
+    function extrairAnoMes(dataStr) {
+        if (!dataStr || typeof dataStr !== 'string') return null;
+        var dataNormalizada = normalizarTextoData(dataStr);
+        
+        if (dataNormalizada.includes('-')) {
+            var partes = dataNormalizada.split('-');
+            if (partes.length >= 2 && partes[0].length === 4) {
+                return partes[0] + '-' + partes[1].padStart(2, '0');
+            }
+        }
+        
+        if (dataNormalizada.includes('/')) {
+            var partesSlash = dataNormalizada.split('/');
+            if (partesSlash.length === 3) {
+                var ano = partesSlash[2].trim();
+                var mes = partesSlash[1].trim().padStart(2, '0');
+                if (ano.length === 4) {
+                    return ano + '-' + mes;
+                }
+            }
+        }
+        return null;
+    }
+
+    function renderizarTabelaPrincipal() {
+        var tbody = document.getElementById('corpoTabela');
+        if (!tbody) return;
+
+        var pNota = (document.getElementById('filtroNota') ? document.getElementById('filtroNota').value : '').toLowerCase();
+        var pForn = (document.getElementById('filtroFornecedor') ? document.getElementById('filtroFornecedor').value : '').toLowerCase();
+        var pItem = (document.getElementById('filtroItem') ? document.getElementById('filtroItem').value : '').toLowerCase();
+        
+        var selectAll = document.getElementById('selectAllPrincipal');
+        if (selectAll) selectAll.checked = false;
+        
+        tbody.innerHTML = '';
+
+        var filtrados = dadosNotas.filter(function(item) {
+            var mN = (item.numeroNota || '').toLowerCase().indexOf(pNota) !== -1;
+            var mF = (item.fornecedor || '').toLowerCase().indexOf(pForn) !== -1;
+            var mI = (item.item || '').toLowerCase().indexOf(pItem) !== -1;
+            return mN && mF && mI;
+        });
+
+        if (filtrados.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; color: #64748b; padding: 25px;">Nenhuma nota encontrada.</td></tr>';
             return;
         }
 
-        snapshot.forEach(function(doc) {
-            var data = doc.data();
-            var row = `<tr>
-                <td>${data.numero || '-'}</td>
-                <td>${data.fornecedor || '-'}</td>
-                <td>${data.dataCriacao || '-'}</td>
-            </tr>`;
-            tabelaDados.innerHTML += row;
+        filtrados.forEach(function(item) {
+            var totalCalc = calcularTotal(item.qtdRecebida, item.valorUnitario);
+            var totalFormatado = parseFloat(totalCalc).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            
+            var tr = document.createElement('tr');
+            tr.innerHTML = 
+                '<td class="checkbox-cell"><input type="checkbox" class="check-principal" value="' + item.idDoc + '"></td>' +
+                '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'numeroNota\', this.innerText); renderizarTabelaPrincipal();">' + (item.numeroNota || '') + '</div></td>' +
+                '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'fornecedor\', this.innerText)">' + (item.fornecedor || '') + '</div></td>' +
+                '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'item\', this.innerText)">' + (item.item || '') + '</div></td>' +
+                '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'dataRecebimento\', this.innerText)">' + (item.dataRecebimento || '') + '</div></td>' +
+                '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'qtdRecebida\', this.innerText); renderizarTabelaPrincipal();">' + (item.qtdRecebida || '') + '</div></td>' +
+                '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'valorUnitario\', this.innerText); renderizarTabelaPrincipal();">' + (item.valorUnitario || '0,00') + '</div></td>' +
+                '<td style="font-weight: 600; color: #0f172a;">R$ ' + totalFormatado + '</td>' +
+                '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'conferente\', this.innerText)">' + (item.conferente || '') + '</div></td>' +
+                '<td><span class="status-badge status-recebido">RECEBIDO</span></td>' +
+                '<td class="actions-cell">' +
+                    '<button class="btn-danger" style="padding: 6px 10px; font-size: 12px;" onclick="excluirNota(\'' + item.idDoc + '\')">🗑️</button>' +
+                '</td>';
+            tbody.appendChild(tr);
         });
-    }, function(error) {
-        console.error("Erro na sincronização:", error);
-        statusConexao.textContent = "❌ Erro de permissão ou conexão com a nuvem.";
-        statusConexao.className = "status-bar";
-    });
+    }
 
-    // 5. Função para Salvar Nova Nota
-    formNota.addEventListener("submit", function(e) {
-        e.preventDefault();
+    function atualizarDashboard() {
+        var elTotal = document.getElementById('statTotalNotas');
+        var elValor = document.getElementById('statValorTotal');
+        var elForn = document.getElementById('statFornecedores');
 
-        var numero = document.getElementById("numNota").value;
-        var fornecedor = document.getElementById("fornecedor").value;
-        var dataAtual = new Date().toLocaleString("pt-BR");
-
-        db.collection("notas").add({
-            numero: numero,
-            fornecedor: fornecedor,
-            dataCriacao: dataAtual
-        })
-        .then(function() {
-            formNota.reset();
-        })
-        .catch(function(error) {
-            alert("Erro ao salvar: " + error.message);
+        if (elTotal) elTotal.innerText = dadosNotas.length;
+        
+        var somaGeral = 0;
+        dadosNotas.forEach(function(item) {
+            somaGeral += parseFloat(calcularTotal(item.qtdRecebida, item.valorUnitario)) || 0;
         });
-    });
+        if (elValor) elValor.innerText = 'R$ ' + somaGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        var fornecedoresUnicos = [];
+        dadosNotas.forEach(function(item) {
+            var f = item.fornecedor ? item.fornecedor.trim() : '';
+            if (f && fornecedoresUnicos.indexOf(f) === -1) {
+                fornecedoresUnicos.push(f);
+            }
+        });
+        if (elForn) elForn.innerText = fornecedoresUnicos.length;
+    }
+
+    function limparFiltrosPrincipal() {
+        if (document.getElementById('filtroNota')) document.getElementById('filtroNota').value = '';
+        if (document.getElementById('filtroFornecedor')) document.getElementById('filtroFornecedor').value = '';
+        if (document.getElementById('filtroItem')) document.getElementById('filtroItem').value = '';
+        renderizarTabelaPrincipal();
+    }
+
+    function toggleSelectAllPrincipal(masterCheckbox) {
+        var checkboxes = document.querySelectorAll('.check-principal');
+        checkboxes.forEach(function(cb) { cb.checked = masterCheckbox.checked; });
+    }
+
+    function excluirSelecionadosPrincipal() {
+        var checkboxes = document.querySelectorAll('.check-principal:checked');
+        if (checkboxes.length === 0) {
+            alert("Nenhuma nota selecionada para exclusão.");
+            return;
+        }
+
+        if (!confirm("Deseja excluir as " + checkboxes.length + " notas selecionadas?")) {
+            return;
+        }
+
+        if (usandoFirebase) {
+            var batch = db.batch();
+            checkboxes.forEach(function(cb) {
+                var docRef = db.collection("notas_recebidas_almoxarifado").doc(cb.value);
+                batch.delete(docRef);
+            });
+            batch.commit().then(function() {
+                alert("Notas excluídas com sucesso!");
+            }).catch(function(err) {
+                alert("Erro ao excluir notas.");
+            });
+        } else {
+            var idsParaExcluir = Array.from(checkboxes).map(function(cb) { return cb.value; });
+            dadosNotas = dadosNotas.filter(function(item) { return idsParaExcluir.indexOf(item.idDoc) === -1; });
+            salvarDadosLocais();
+            renderizarTabelaPrincipal();
+            atualizarDashboard();
+            renderizarRelatorio();
+            atualizarSelectFornecedoresRelatorio();
+            alert("Notas excluídas com sucesso!");
+        }
+    }
+
+    function atualizarSelectFornecedoresRelatorio() {
+        var select = document.getElementById('filtroFornecedorRelatorio');
+        if (!select) return;
+        var valorAtual = select.value;
+
+        var fornecedores = [];
+        dadosNotas.forEach(function(i) {
+            var f = i.fornecedor ? i.fornecedor.trim() : '';
+            if (f && fornecedores.indexOf(f) === -1) {
+                fornecedores.push(f);
+            }
+        });
+        fornecedores.sort();
+        
+        select.innerHTML = '<option value="">-- Todos os Fornecedores --</option>';
+        fornecedores.forEach(function(f) {
+            var opt = document.createElement('option');
+            opt.value = f;
+            opt.textContent = f;
+            select.appendChild(opt);
+        });
+        select.value = valorAtual;
+    }
+
+    function filtrarListaRelatorio() {
+        var elData = document.getElementById('filtroDataCompleta');
+        var elMes = document.getElementById('filtroMesRelatorio');
+        var elForn = document.getElementById('filtroFornecedorRelatorio');
+
+        var fDataCompleta = normalizarTextoData(elData ? elData.value : '');
+        var fMes = elMes ? elMes.value : '';
+        var fForn = (elForn ? elForn.value : '').toLowerCase();
+
+        return dadosNotas.filter(function(item) {
+            var dataNotaNorm = normalizarTextoData(item.dataRecebimento || '');
+            var fornecedorNota = (item.fornecedor || '').toLowerCase();
+
+            var matchData = true;
+            if (fDataCompleta) {
+                matchData = dataNotaNorm.indexOf(fDataCompleta) !== -1;
+            } else if (fMes) {
+                var anoMes = extrairAnoMes(item.dataRecebimento);
+                matchData = (anoMes === fMes);
+            }
+
+            var matchForn = true;
+            if (fForn) {
+                matchForn = fornecedorNota.indexOf(fForn) !== -1;
+            }
+
+            return matchData && matchForn;
+        });
+    }
+
+    function renderizarRelatorio() {
+        var tbody = document.getElementById('corpoTabelaRelatorio');
+        if (!tbody) return;
+
+        var selectAll = document.getElementById('selectAllRelatorio');
+        if (selectAll) selectAll.checked = false;
+
+        tbody.innerHTML = '';
+        var filtrados = filtrarListaRelatorio();
+
+        if (filtrados.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #64748b; padding: 25px;">Nenhum registro encontrado para os filtros selecionados.</td></tr>';
+            return;
+        }
+
+        filtrados.forEach(function(item) {
+            var totalCalc = calcularTotal(item.qtdRecebida, item.valorUnitario);
+            var totalFormatado = parseFloat(totalCalc).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            var unitFormatado = item.valorUnitario || '0,00';
+
+            var tr = document.createElement('tr');
+            tr.innerHTML = 
+                '<td class="checkbox-cell"><input type="checkbox" class="check-relatorio" value="' + item.idDoc + '"></td>' +
+                '<td>' + (item.numeroNota || '') + '</td>' +
+                '<td>' + (item.fornecedor || '') + '</td>' +
+                '<td>' + (item.item || '') + '</td>' +
+                '<td>' + (item.dataRecebimento || '') + '</td>' +
+                '<td>' + (item.qtdRecebida || '') + '</td>' +
+                '<td>R$ ' + unitFormatado + '</td>' +
+                '<td style="font-weight: 600;">R$ ' + totalFormatado + '</td>' +
+                '<td>' + (item.conferente || '') + '</td>';
+            tbody.appendChild(tr);
+        });
+    }
+
+    function toggleSelectAllRelatorio(masterCheckbox) {
+        var checkboxes = document.querySelectorAll('.check-relatorio');
+        checkboxes.forEach(function(cb) { cb.checked = masterCheckbox.checked; });
+    }
+
+    function gerarPDFRelatorio() {
+        var filtrados = filtrarListaRelatorio();
+        if (filtrados.length === 0) {
+            alert("Não há dados para gerar o relatório.");
+            return;
+        }
+
+        popularDocumentoPDF(filtrados, "Relatório Geral Filtrado");
+        window.print();
+    }
+
+    function gerarPDFSelecionados() {
+        var checkboxes = document.querySelectorAll('.check-relatorio:checked');
+        if (checkboxes.length === 0) {
+            alert("Nenum item selecionado na tabela de relatório.");
+            return;
+        }
+
+        var idsSelecionados = Array.from(checkboxes).map(function(cb) { return cb.value; });
+        var filtrados = dadosNotas.filter(function(item) { return idsSelecionados.indexOf(item.idDoc) !== -1; });
+
+        popularDocumentoPDF(filtrados, "Relatório de Itens Selecionados");
+        window.print();
+    }
+
+    function popularDocumentoPDF(listaItens, tituloPeriodo) {
+        var elPeriodo = document.getElementById('pdfPeriodoRelatorio');
+        if (elPeriodo) elPeriodo.innerText = tituloPeriodo;
+        
+        var pdfTbody = document.getElementById('pdfCorpoRelatorio');
+        if (!pdfTbody) return;
+        pdfTbody.innerHTML = '';
+
+        var somaGeral = 0;
+
+        listaItens.forEach(function(item) {
+            var totalCalc = parseFloat(calcularTotal(item.qtdRecebida, item.valorUnitario)) || 0;
+            somaGeral += totalCalc;
+            var totalFmt = totalCalc.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            var unitFmt = item.valorUnitario || '0,00';
+
+            var tr = document.createElement('tr');
+            tr.innerHTML = 
+                '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: center;">' + (item.numeroNota || '') + '</td>' +
+                '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: left;">' + (item.fornecedor || '') + '</td>' +
+                '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: left;">' + (item.item || '') + '</td>' +
+                '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: center;">' + (item.dataRecebimento || '') + '</td>' +
+                '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: center;">' + (item.qtdRecebida || '') + '</td>' +
+                '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right;">R$ ' + unitFmt + '</td>' +
+                '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; font-weight: bold;">R$ ' + totalFmt + '</td>' +
+                '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: left;">' + (item.conferente || '') + '</td>';
+            pdfTbody.appendChild(tr);
+        });
+
+        var elSoma = document.getElementById('pdfSomaTotalGeral');
+        if (elSoma) elSoma.innerText = 'VALOR TOTAL GERAL: R$ ' + somaGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function excluirSelecionadosRelatorio() {
+        var checkboxes = document.querySelectorAll('.check-relatorio:checked');
+        if (checkboxes.length === 0) {
+            alert("Nenhum item selecionado para exclusão.");
+            return;
+        }
+
+        if (!confirm("Deseja excluir as " + checkboxes.length + " notas selecionadas?")) {
+            return;
+        }
+
+        if (usandoFirebase) {
+            var batch = db.batch();
+            checkboxes.forEach(function(cb) {
+                var docRef = db.collection("notas_recebidas_almoxarifado").doc(cb.value);
+                batch.delete(docRef);
+            });
+            batch.commit().then(function() {
+                alert("Notas excluídas com sucesso!");
+            }).catch(function(err) {
+                alert("Erro ao excluir notas.");
+            });
+        } else {
+            var idsParaExcluir = Array.from(checkboxes).map(function(cb) { return cb.value; });
+            dadosNotas = dadosNotas.filter(function(item) { return idsParaExcluir.indexOf(item.idDoc) === -1; });
+            salvarDadosLocais();
+            renderizarTabelaPrincipal();
+            atualizarDashboard();
+            renderizarRelatorio();
+            atualizarSelectFornecedoresRelatorio();
+            alert("Notas excluídas com sucesso!");
+        }
+    }
+
+    function fazerBackup() {
+        var dadosJson = JSON.stringify(dadosNotas, null, 2);
+        var blob = new Blob([dadosJson], { type: "application/json" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = "backup_notas_almoxarifado_" + new Date().toISOString().slice(0,10) + ".json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function restaurarBackup(event) {
+        var arquivo = event.target.files[0];
+        if (!arquivo) return;
+
+        var leitor = new FileReader();
+        leitor.onload = function(e) {
+            try {
+                var notasRestauradas = JSON.parse(e.target.result);
+                if (!Array.isArray(notasRestauradas)) {
+                    alert("O arquivo de backup é inválido.");
+                    return;
+                }
+
+                if (!confirm("Atenção: Isso irá importar " + notasRestauradas.length + " notas. Deseja continuar?")) {
+                    return;
+                }
+
+                if (usandoFirebase) {
+                    var batch = db.batch();
+                    notasRestauradas.forEach(function(nota) {
+                        var novoDocRef = db.collection("notas_recebidas_almoxarifado").doc();
+                        var dadosParaSalvar = Object.assign({}, nota);
+                        delete dadosParaSalvar.idDoc;
+                        dadosParaSalvar.criadoEm = firebase.firestore.FieldValue.serverTimestamp();
+                        batch.set(novoDocRef, dadosParaSalvar);
+                    });
+                    batch.commit().then(function() {
+                        alert("Backup restaurado com sucesso na nuvem!");
+                    });
+                } else {
+                    notasRestauradas.forEach(function(nota) {
+                        if (!nota.idDoc) nota.idDoc = 'local_' + Math.random();
+                        dadosNotas.push(nota);
+                    });
+                    salvarDadosLocais();
+                    renderizarTabelaPrincipal();
+                    atualizarDashboard();
+                    renderizarRelatorio();
+                    atualizarSelectFornecedoresRelatorio();
+                    alert("Backup restaurado com sucesso localmente!");
+                }
+                document.getElementById('arquivoBackup').value = '';
+            } catch (erro) {
+                alert("Erro ao processar o arquivo JSON de backup.");
+            }
+        };
+        leitor.readAsText(arquivo);
+    }
 </script>
 
 </body>
