@@ -462,14 +462,15 @@
 </div>
 
 <script>
-    // Configuração e Inicialização Oficial do Firebase Firestore
+    // Configuração e Inicialização Oficial do Firebase Firestore (Com a chave correta extraída do seu painel)
     var firebaseConfig = {
         apiKey: "AIzaSyB_stAqlEz81bKnAWk1LPqoU9v6W6TVuo8",
         authDomain: "notas-3a3b1.firebaseapp.com",
+        databaseURL: "https://notas-3a3b1-default-rtdb.firebaseio.com",
         projectId: "notas-3a3b1",
         storageBucket: "notas-3a3b1.firebasestorage.app",
         messagingSenderId: "212629270963",
-        appId: "1:212629270963:web:0396cf8cb2434d5f935bc6"
+        appId: "1:212629270963:web:8170c10e170c6021935bc6"
     };
     
     if (!firebase.apps.length) {
@@ -508,6 +509,7 @@
                 renderizarRelatorio();
                 atualizarSelectFornecedoresRelatorio();
             }, function(error) {
+                console.error("Erro no Firebase:", error);
                 usandoFirebase = false;
                 if (statusEl) {
                     statusEl.innerText = "⚠️ Modo Local Ativo (Salvando no Navegador)";
@@ -517,6 +519,7 @@
                 carregarDadosLocais();
             });
         } catch(e) {
+            console.error("Erro ao tentar conectar:", e);
             usandoFirebase = false;
             if (statusEl) {
                 statusEl.innerText = "⚠️ Modo Local Ativo";
