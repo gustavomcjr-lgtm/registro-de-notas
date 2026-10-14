@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Notas Recebidas Almoxarifado - ELOSCIENTIFIC</title>
-    <!-- SDK do Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <!-- SDK do Firebase (Versão Compatível) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
     <style>
         :root {
             --primary-color: #0f172a;
@@ -462,6 +462,7 @@
 </div>
 
 <script>
+    // Configuração e Inicialização Oficial do Firebase Firestore
     var firebaseConfig = {
         apiKey: "AIzaSyB_stAqlEz81bKnAWk1LPqoU9v6W6TVuo8",
         authDomain: "notas-3a3b1.firebaseapp.com",
@@ -470,11 +471,11 @@
         messagingSenderId: "212629270963",
         appId: "1:212629270963:web:0396cf8cb2434d5f935bc6"
     };
-
+    
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
-
+    
     var db = firebase.firestore();
     var usandoFirebase = true;
     var dadosNotas = [];
