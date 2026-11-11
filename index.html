@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Notas Recebidas Almoxarifado - ELOSCIENTIFIC</title>
-    <!-- SDK do Firebase (Versão Compatível) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <!-- SDK do Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <style>
         :root {
             --primary-color: #0f172a;
@@ -251,6 +251,33 @@
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
         }
 
+        /* ===== Ajustes de largura das colunas ===== */
+        /* Fornecedor: coluna mais estreita, o texto quebra em mais de uma linha */
+        th.col-fornecedor, td.col-fornecedor {
+            width: 170px;
+            max-width: 170px;
+            overflow-wrap: anywhere;
+        }
+        /* Data abreviada (00/00/00): coluna curta, sem quebra de linha */
+        th.col-data, td.col-data {
+            width: 84px;
+            min-width: 84px;
+            white-space: nowrap;
+            padding-left: 6px;
+            padding-right: 6px;
+        }
+        td.col-data [contenteditable="true"] { padding-left: 6px; padding-right: 6px; }
+        /* Item / Produto: células maiores */
+        th.col-item, td.col-item { width: 300px; min-width: 300px; }
+        /* Valor unitário: a coluna se ajusta ao conteúdo e cresce conforme o valor digitado */
+        th.col-valor-unit, td.col-valor-unit { width: 1%; white-space: nowrap; }
+        td.col-valor-unit [contenteditable="true"] { width: auto; min-width: 64px; }
+        /* Valores: espaço para até 4 casas depois da vírgula (ex.: 9.999,9999), sem quebra de linha */
+        th.col-valor, td.col-valor {
+            min-width: 155px;
+            white-space: nowrap;
+        }
+
         .status-badge {
             padding: 6px 12px;
             border-radius: 20px;
@@ -319,12 +346,12 @@
                     <tr>
                         <th class="checkbox-cell"><input type="checkbox" id="selectAllPrincipal" onclick="toggleSelectAllPrincipal(this)"></th>
                         <th>Nº da Nota</th>
-                        <th>Fornecedor</th>
-                        <th>Item / Produto</th>
-                        <th>Data Recebimento</th>
+                        <th class="col-fornecedor">Fornecedor</th>
+                        <th class="col-item">Item / Produto</th>
+                        <th class="col-data">Data Receb.</th>
                         <th>Qtd Recebida</th>
-                        <th>Valor Unitário (R$)</th>
-                        <th>Valor Total (R$)</th>
+                        <th class="col-valor-unit">Valor Unitário (R$)</th>
+                        <th class="col-valor">Valor Total (R$)</th>
                         <th>Conferente</th>
                         <th>Status</th>
                         <th class="actions-cell">Ação</th>
@@ -391,12 +418,12 @@
                     <tr>
                         <th class="checkbox-cell"><input type="checkbox" id="selectAllRelatorio" onclick="toggleSelectAllRelatorio(this)"></th>
                         <th>Nº da Nota</th>
-                        <th>Fornecedor</th>
-                        <th>Item / Produto</th>
-                        <th>Data Recebimento</th>
+                        <th class="col-fornecedor">Fornecedor</th>
+                        <th class="col-item">Item / Produto</th>
+                        <th class="col-data">Data Receb.</th>
                         <th>Qtd Recebida</th>
-                        <th>Valor Unitário</th>
-                        <th>Valor Total</th>
+                        <th class="col-valor-unit">Valor Unitário</th>
+                        <th class="col-valor">Valor Total</th>
                         <th>Conferente</th>
                     </tr>
                 </thead>
@@ -462,24 +489,24 @@
 </div>
 
 <script>
-    // Configuração e Inicialização Oficial do Firebase Firestore (Com a chave correta extraída do seu painel)
     var firebaseConfig = {
         apiKey: "AIzaSyB_stAqlEz81bKnAWk1LPqoU9v6W6TVuo8",
         authDomain: "notas-3a3b1.firebaseapp.com",
-        databaseURL: "https://notas-3a3b1-default-rtdb.firebaseio.com",
         projectId: "notas-3a3b1",
         storageBucket: "notas-3a3b1.firebasestorage.app",
         messagingSenderId: "212629270963",
-        appId: "1:212629270963:web:8170c10e170c6021935bc6"
+        appId: "1:212629270963:web:0396cf8cb2434d5f935bc6"
     };
-    
+
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
-    
+
     var db = firebase.firestore();
     var usandoFirebase = true;
     var dadosNotas = [];
+    var focarNovaNota = false;
+    var renderizandoPrincipal = false;
 
     document.addEventListener("DOMContentLoaded", function() {
         var statusEl = document.getElementById('statusNuvem');
@@ -509,7 +536,6 @@
                 renderizarRelatorio();
                 atualizarSelectFornecedoresRelatorio();
             }, function(error) {
-                console.error("Erro no Firebase:", error);
                 usandoFirebase = false;
                 if (statusEl) {
                     statusEl.innerText = "⚠️ Modo Local Ativo (Salvando no Navegador)";
@@ -519,7 +545,6 @@
                 carregarDadosLocais();
             });
         } catch(e) {
-            console.error("Erro ao tentar conectar:", e);
             usandoFirebase = false;
             if (statusEl) {
                 statusEl.innerText = "⚠️ Modo Local Ativo";
@@ -569,6 +594,8 @@
     }
 
     function adicionarNota() {
+        focarNovaNota = true;
+        setTimeout(function() { focarNovaNota = false; }, 4000);
         var hoje = new Date();
         var dia = String(hoje.getDate()).padStart(2, '0');
         var mes = String(hoje.getMonth() + 1).padStart(2, '0');
@@ -616,10 +643,16 @@
     }
 
     function atualizarCampo(idDoc, campo, valor) {
+        // Durante o redesenho da tabela o navegador pode disparar o 'blur' da célula removida;
+        // não salva nada nesse momento (o foco e o texto digitado são restaurados depois).
+        if (renderizandoPrincipal) return;
         if (campo === 'valorUnitario') {
             valor = formatarMoedaInput(valor);
         } else if (campo === 'numeroNota') {
             valor = formatarNumeroNota(valor);
+        } else if (campo === 'dataRecebimento') {
+            // A tela mostra 00/00/00, mas o dado é guardado completo (00/00/0000)
+            valor = expandirData(valor);
         }
 
         if (usandoFirebase) {
@@ -643,10 +676,37 @@
     }
 
     function formatarMoedaInput(texto) {
-        var apenasNumeros = texto.replace(/\D/g, '');
-        if (!apenasNumeros) return "0,00";
-        var numero = parseFloat(apenasNumeros) / 100;
-        return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        var t = String(texto || '').replace('R$', '').replace(/\s/g, '');
+        if (!t) return "0,00";
+        var numero;
+        if (t.indexOf(',') !== -1) {
+            // Com vírgula: formato brasileiro (ponto = milhar, vírgula = decimal), até 4 casas. Ex.: 9.999,9999
+            numero = parseFloat(t.replace(/\./g, '').replace(',', '.'));
+        } else {
+            // Sem vírgula: mantém o comportamento anterior (os 2 últimos dígitos são os centavos)
+            var apenasNumeros = t.replace(/\D/g, '');
+            numero = apenasNumeros ? parseFloat(apenasNumeros) / 100 : 0;
+        }
+        if (isNaN(numero)) numero = 0;
+        return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+    }
+
+    // 30/09/2026 (ou 2026-09-30) -> 30/09/26 (somente para exibição)
+    function abreviarData(texto) {
+        var t = String(texto || '').trim();
+        var m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (m) return m[1].padStart(2, '0') + '/' + m[2].padStart(2, '0') + '/' + m[3].slice(2);
+        var iso = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (iso) return iso[3] + '/' + iso[2] + '/' + iso[1].slice(2);
+        return t;
+    }
+
+    // 30/09/26 -> 30/09/2026 (para guardar o dado completo)
+    function expandirData(texto) {
+        var t = String(texto || '').trim();
+        var m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+        if (m) return m[1].padStart(2, '0') + '/' + m[2].padStart(2, '0') + '/20' + m[3];
+        return t;
     }
 
     function calcularTotal(qtd, unitario) {
@@ -654,7 +714,7 @@
         var uStr = String(unitario || '0').replace('R$', '').trim();
         uStr = uStr.replace(/\./g, '').replace(',', '.');
         var u = parseFloat(uStr) || 0;
-        return (q * u).toFixed(2);
+        return (q * u).toFixed(4);
     }
 
     function normalizarTextoData(texto) {
@@ -695,7 +755,128 @@
         return null;
     }
 
+    // ===== Navegação pelo teclado nas células (Tab / Enter) =====
+    function celulasEditaveis(tr) {
+        return Array.prototype.slice.call(tr.querySelectorAll('[contenteditable="true"]'));
+    }
+
+    function idDaLinha(tr) {
+        var cb = tr.querySelector('.check-principal');
+        return cb ? cb.value : null;
+    }
+
+    function focarElemento(celula) {
+        celula.focus();
+        // Seleciona o conteúdo da célula: o que for digitado substitui o valor atual
+        var r = document.createRange();
+        r.selectNodeContents(celula);
+        var s = window.getSelection();
+        s.removeAllRanges();
+        s.addRange(r);
+        if (celula.scrollIntoView) celula.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+
+    function focarCelula(id, idx) {
+        var linhas = document.querySelectorAll('#corpoTabela tr');
+        for (var i = 0; i < linhas.length; i++) {
+            if (idDaLinha(linhas[i]) === id) {
+                var c = celulasEditaveis(linhas[i])[idx];
+                if (c) focarElemento(c);
+                return;
+            }
+        }
+    }
+
+    function destinoNavegacao(celula, voltar) {
+        var tr = celula.closest('tr');
+        var celulas = celulasEditaveis(tr);
+        var i = celulas.indexOf(celula);
+        var outra;
+        if (!voltar) {
+            if (i < celulas.length - 1) return { id: idDaLinha(tr), idx: i + 1 };
+            outra = tr.nextElementSibling;
+            while (outra && !idDaLinha(outra)) outra = outra.nextElementSibling;
+            return outra ? { id: idDaLinha(outra), idx: 0 } : null;
+        }
+        if (i > 0) return { id: idDaLinha(tr), idx: i - 1 };
+        outra = tr.previousElementSibling;
+        while (outra && !idDaLinha(outra)) outra = outra.previousElementSibling;
+        return outra ? { id: idDaLinha(outra), idx: celulasEditaveis(outra).length - 1 } : null;
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if ((e.key !== 'Tab' && e.key !== 'Enter') || e.isComposing) return;
+        var celula = e.target;
+        if (!celula || !celula.isContentEditable || !celula.closest || !celula.closest('#corpoTabela')) return;
+
+        var destino = destinoNavegacao(celula, e.shiftKey);
+        if (!destino) {
+            if (e.key === 'Enter') { e.preventDefault(); celula.blur(); }   // última célula: apenas salva
+            return;   // Tab na última (ou Shift+Tab na primeira) célula: comportamento normal do navegador
+        }
+        e.preventDefault();
+        celula.blur();                              // salva a célula atual (a tabela pode ser redesenhada aqui)
+        focarCelula(destino.id, destino.idx);       // vai para a próxima, já pronta para escrever
+    });
+
+    // Mantém o foco (e o que estava sendo digitado) quando a tabela é redesenhada,
+    // por exemplo quando o Firebase sincroniza uma alteração.
+    function capturarFoco() {
+        var a = document.activeElement;
+        if (!a || !a.isContentEditable || !a.closest || !a.closest('#corpoTabela')) return null;
+        var tr = a.closest('tr');
+        var sel = window.getSelection();
+        var dentro = !!(sel && sel.rangeCount && a.contains(sel.anchorNode));
+        return {
+            id: idDaLinha(tr),
+            idx: celulasEditaveis(tr).indexOf(a),
+            texto: a.innerText,
+            tudo: !!(dentro && !sel.isCollapsed && sel.toString() === a.innerText),
+            pos: (dentro && sel.anchorNode.nodeType === 3) ? sel.anchorOffset : null
+        };
+    }
+
+    function restaurarFoco(foco) {
+        if (!foco || foco.id === null) return;
+        var linhas = document.querySelectorAll('#corpoTabela tr');
+        for (var i = 0; i < linhas.length; i++) {
+            if (idDaLinha(linhas[i]) !== foco.id) continue;
+            var c = celulasEditaveis(linhas[i])[foco.idx];
+            if (!c) return;
+            if (c.innerText !== foco.texto) c.innerText = foco.texto;
+            c.focus({ preventScroll: true });
+            var r = document.createRange();
+            var no = c.firstChild;
+            if (foco.tudo) {
+                r.selectNodeContents(c);
+            } else if (no && no.nodeType === 3 && foco.pos !== null) {
+                r.setStart(no, Math.min(foco.pos, no.length));
+                r.collapse(true);
+            } else {
+                r.selectNodeContents(c);
+                r.collapse(false);
+            }
+            var s = window.getSelection();
+            s.removeAllRanges();
+            s.addRange(r);
+            return;
+        }
+    }
+
     function renderizarTabelaPrincipal() {
+        if (renderizandoPrincipal) return;   // evita redesenhar a tabela dentro de outro redesenho
+        renderizandoPrincipal = true;
+        var foco = capturarFoco();
+        try { desenharTabelaPrincipal(); } finally { renderizandoPrincipal = false; }
+        restaurarFoco(foco);
+        if (focarNovaNota) {
+            var primeira = document.querySelector('#corpoTabela tr');
+            var c = primeira ? celulasEditaveis(primeira)[0] : null;
+            if (c) { focarElemento(c); focarNovaNota = false; }
+        }
+    }
+
+    function desenharTabelaPrincipal() {
         var tbody = document.getElementById('corpoTabela');
         if (!tbody) return;
 
@@ -722,18 +903,18 @@
 
         filtrados.forEach(function(item) {
             var totalCalc = calcularTotal(item.qtdRecebida, item.valorUnitario);
-            var totalFormatado = parseFloat(totalCalc).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            var totalFormatado = parseFloat(totalCalc).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
             
             var tr = document.createElement('tr');
             tr.innerHTML = 
                 '<td class="checkbox-cell"><input type="checkbox" class="check-principal" value="' + item.idDoc + '"></td>' +
                 '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'numeroNota\', this.innerText); renderizarTabelaPrincipal();">' + (item.numeroNota || '') + '</div></td>' +
-                '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'fornecedor\', this.innerText)">' + (item.fornecedor || '') + '</div></td>' +
-                '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'item\', this.innerText)">' + (item.item || '') + '</div></td>' +
-                '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'dataRecebimento\', this.innerText)">' + (item.dataRecebimento || '') + '</div></td>' +
+                '<td class="col-fornecedor"><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'fornecedor\', this.innerText)">' + (item.fornecedor || '') + '</div></td>' +
+                '<td class="col-item"><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'item\', this.innerText)">' + (item.item || '') + '</div></td>' +
+                '<td class="col-data"><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'dataRecebimento\', this.innerText)">' + abreviarData(item.dataRecebimento || '') + '</div></td>' +
                 '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'qtdRecebida\', this.innerText); renderizarTabelaPrincipal();">' + (item.qtdRecebida || '') + '</div></td>' +
-                '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'valorUnitario\', this.innerText); renderizarTabelaPrincipal();">' + (item.valorUnitario || '0,00') + '</div></td>' +
-                '<td style="font-weight: 600; color: #0f172a;">R$ ' + totalFormatado + '</td>' +
+                '<td class="col-valor-unit"><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'valorUnitario\', this.innerText); renderizarTabelaPrincipal();">' + (item.valorUnitario || '0,00') + '</div></td>' +
+                '<td class="col-valor" style="font-weight: 600; color: #0f172a;">R$ ' + totalFormatado + '</td>' +
                 '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'conferente\', this.innerText)">' + (item.conferente || '') + '</div></td>' +
                 '<td><span class="status-badge status-recebido">RECEBIDO</span></td>' +
                 '<td class="actions-cell">' +
@@ -754,7 +935,7 @@
         dadosNotas.forEach(function(item) {
             somaGeral += parseFloat(calcularTotal(item.qtdRecebida, item.valorUnitario)) || 0;
         });
-        if (elValor) elValor.innerText = 'R$ ' + somaGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (elValor) elValor.innerText = 'R$ ' + somaGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 
         var fornecedoresUnicos = [];
         dadosNotas.forEach(function(item) {
@@ -842,6 +1023,8 @@
         var elForn = document.getElementById('filtroFornecedorRelatorio');
 
         var fDataCompleta = normalizarTextoData(elData ? elData.value : '');
+        // Aceita também a data abreviada (ex: 30/09/26) no filtro
+        var fDataExpandida = normalizarTextoData(expandirData(elData ? elData.value : ''));
         var fMes = elMes ? elMes.value : '';
         var fForn = (elForn ? elForn.value : '').toLowerCase();
 
@@ -851,7 +1034,7 @@
 
             var matchData = true;
             if (fDataCompleta) {
-                matchData = dataNotaNorm.indexOf(fDataCompleta) !== -1;
+                matchData = dataNotaNorm.indexOf(fDataCompleta) !== -1 || dataNotaNorm.indexOf(fDataExpandida) !== -1;
             } else if (fMes) {
                 var anoMes = extrairAnoMes(item.dataRecebimento);
                 matchData = (anoMes === fMes);
@@ -883,19 +1066,19 @@
 
         filtrados.forEach(function(item) {
             var totalCalc = calcularTotal(item.qtdRecebida, item.valorUnitario);
-            var totalFormatado = parseFloat(totalCalc).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            var totalFormatado = parseFloat(totalCalc).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
             var unitFormatado = item.valorUnitario || '0,00';
 
             var tr = document.createElement('tr');
             tr.innerHTML = 
                 '<td class="checkbox-cell"><input type="checkbox" class="check-relatorio" value="' + item.idDoc + '"></td>' +
                 '<td>' + (item.numeroNota || '') + '</td>' +
-                '<td>' + (item.fornecedor || '') + '</td>' +
-                '<td>' + (item.item || '') + '</td>' +
-                '<td>' + (item.dataRecebimento || '') + '</td>' +
+                '<td class="col-fornecedor">' + (item.fornecedor || '') + '</td>' +
+                '<td class="col-item">' + (item.item || '') + '</td>' +
+                '<td class="col-data">' + abreviarData(item.dataRecebimento || '') + '</td>' +
                 '<td>' + (item.qtdRecebida || '') + '</td>' +
-                '<td>R$ ' + unitFormatado + '</td>' +
-                '<td style="font-weight: 600;">R$ ' + totalFormatado + '</td>' +
+                '<td class="col-valor-unit">R$ ' + unitFormatado + '</td>' +
+                '<td class="col-valor" style="font-weight: 600;">R$ ' + totalFormatado + '</td>' +
                 '<td>' + (item.conferente || '') + '</td>';
             tbody.appendChild(tr);
         });
@@ -944,7 +1127,7 @@
         listaItens.forEach(function(item) {
             var totalCalc = parseFloat(calcularTotal(item.qtdRecebida, item.valorUnitario)) || 0;
             somaGeral += totalCalc;
-            var totalFmt = totalCalc.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            var totalFmt = totalCalc.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
             var unitFmt = item.valorUnitario || '0,00';
 
             var tr = document.createElement('tr');
@@ -952,16 +1135,16 @@
                 '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: center;">' + (item.numeroNota || '') + '</td>' +
                 '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: left;">' + (item.fornecedor || '') + '</td>' +
                 '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: left;">' + (item.item || '') + '</td>' +
-                '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: center;">' + (item.dataRecebimento || '') + '</td>' +
+                '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: center; white-space: nowrap;">' + abreviarData(item.dataRecebimento || '') + '</td>' +
                 '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: center;">' + (item.qtdRecebida || '') + '</td>' +
-                '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right;">R$ ' + unitFmt + '</td>' +
-                '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; font-weight: bold;">R$ ' + totalFmt + '</td>' +
+                '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; white-space: nowrap;">R$ ' + unitFmt + '</td>' +
+                '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; font-weight: bold; white-space: nowrap;">R$ ' + totalFmt + '</td>' +
                 '<td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: left;">' + (item.conferente || '') + '</td>';
             pdfTbody.appendChild(tr);
         });
 
         var elSoma = document.getElementById('pdfSomaTotalGeral');
-        if (elSoma) elSoma.innerText = 'VALOR TOTAL GERAL: R$ ' + somaGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (elSoma) elSoma.innerText = 'VALOR TOTAL GERAL: R$ ' + somaGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
     }
 
     function excluirSelecionadosRelatorio() {
