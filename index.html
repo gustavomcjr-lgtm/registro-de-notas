@@ -278,6 +278,18 @@
             white-space: nowrap;
         }
 
+        /* Notas com mais de um item: linhas agrupadas e total da nota */
+        tr.grupo-multi { background-color: #f5f9ff; }
+        tr.grupo-multi td:first-child { border-left: 4px solid var(--secondary-color); }
+        tr.linha-total-nota td {
+            background: #eaf2ff;
+            font-weight: 700;
+            color: var(--primary-color);
+            border-bottom: 2px solid #bfd4f6;
+            white-space: nowrap;
+        }
+        tr.linha-total-nota td.rotulo-total { text-align: right; }
+
         .status-badge {
             padding: 6px 12px;
             border-radius: 20px;
@@ -289,7 +301,7 @@
         }
         .status-recebido { background: #d1fae5; color: #047857; border: 1px solid #a7f3d0; }
 
-        .actions-cell { text-align: center; width: 70px; }
+        .actions-cell { text-align: center; width: 100px; white-space: nowrap; }
         .checkbox-cell { text-align: center; width: 40px; }
         input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
 
@@ -506,6 +518,7 @@
     var usandoFirebase = true;
     var dadosNotas = [];
     var focarNovaNota = false;
+    var focoPendente = null;
     var renderizandoPrincipal = false;
 
     document.addEventListener("DOMContentLoaded", function() {
@@ -655,16 +668,43 @@
             valor = expandirData(valor);
         }
 
+        // Fornecedor, data e conferente valem para a nota toda: oferece aplicar aos outros itens dela
+        var propagarPara = [];
+        if (campo === 'fornecedor' || campo === 'dataRecebimento' || campo === 'conferente') {
+            var atual = dadosNotas.find(function(i) { return i.idDoc === idDoc; });
+            var igual = function(a, b) { return String(a || '').trim() === String(b || '').trim(); };
+            if (atual && atual.numeroNota && !igual(atual[campo], valor)) {
+                propagarPara = dadosNotas.filter(function(i) {
+                    return i.idDoc !== idDoc && i.numeroNota === atual.numeroNota && !igual(i[campo], valor);
+                });
+                if (propagarPara.length > 0) {
+                    var rotulos = { fornecedor: 'o fornecedor', dataRecebimento: 'a data', conferente: 'o conferente' };
+                    var msg = 'Esta nota tem mais ' + propagarPara.length + ' item(ns). Aplicar ' + rotulos[campo] +
+                              ' "' + valor + '" também aos outros itens da nota?';
+                    if (!confirm(msg)) propagarPara = [];
+                }
+            }
+        }
+
         if (usandoFirebase) {
             var obj = {};
             obj[campo] = valor;
             db.collection("notas_recebidas_almoxarifado").doc(idDoc).update(obj);
+            if (propagarPara.length > 0) {
+                var lote = db.batch();
+                propagarPara.forEach(function(o) {
+                    lote.update(db.collection("notas_recebidas_almoxarifado").doc(o.idDoc), obj);
+                });
+                lote.commit();
+            }
         } else {
             var item = dadosNotas.find(function(i) { return i.idDoc === idDoc; });
             if (item) {
                 item[campo] = valor;
+                propagarPara.forEach(function(o) { o[campo] = valor; });
                 salvarDadosLocais();
                 atualizarDashboard();
+                if (propagarPara.length > 0) renderizarTabelaPrincipal();
             }
         }
     }
@@ -869,11 +909,121 @@
         var foco = capturarFoco();
         try { desenharTabelaPrincipal(); } finally { renderizandoPrincipal = false; }
         restaurarFoco(foco);
+        if (focoPendente) {
+            var existe = Array.prototype.some.call(document.querySelectorAll('#corpoTabela .check-principal'), function(cb) { return cb.value === focoPendente.id; });
+            if (existe) { focarCelula(focoPendente.id, focoPendente.idx); focoPendente = null; }
+        }
         if (focarNovaNota) {
             var primeira = document.querySelector('#corpoTabela tr');
             var c = primeira ? celulasEditaveis(primeira)[0] : null;
             if (c) { focarElemento(c); focarNovaNota = false; }
         }
+    }
+
+    // Junta os itens da mesma nota (mesmo número) um embaixo do outro.
+    // A nota fica na posição do seu item mais antigo (não "pula" para o topo quando entra um item novo);
+    // dentro da nota, o item mais antigo fica em cima.
+    function agruparPorNota(lista) {
+        var grupos = [], indice = {};
+        lista.slice().reverse().forEach(function(item) {   // do mais antigo para o mais novo
+            var chave = item.numeroNota ? 'n_' + item.numeroNota : 'id_' + item.idDoc;
+            if (indice[chave] === undefined) {
+                indice[chave] = grupos.length;
+                grupos.push([]);
+            }
+            grupos[indice[chave]].push(item);
+        });
+        return grupos.reverse();   // notas mais recentes primeiro, como antes
+    }
+
+    function criarLinhaPrincipal(item, multi) {
+            var totalCalc = calcularTotal(item.qtdRecebida, item.valorUnitario);
+            var totalFormatado = parseFloat(totalCalc).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+            
+            var tr = document.createElement('tr');
+            tr.innerHTML = 
+                '<td class="checkbox-cell"><input type="checkbox" class="check-principal" value="' + item.idDoc + '"></td>' +
+                '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'numeroNota\', this.innerText); renderizarTabelaPrincipal();">' + (item.numeroNota || '') + '</div></td>' +
+                '<td class="col-fornecedor"><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'fornecedor\', this.innerText)">' + (item.fornecedor || '') + '</div></td>' +
+                '<td class="col-item"><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'item\', this.innerText)">' + (item.item || '') + '</div></td>' +
+                '<td class="col-data"><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'dataRecebimento\', this.innerText)">' + abreviarData(item.dataRecebimento || '') + '</div></td>' +
+                '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'qtdRecebida\', this.innerText); renderizarTabelaPrincipal();">' + (item.qtdRecebida || '') + '</div></td>' +
+                '<td class="col-valor-unit"><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'valorUnitario\', this.innerText); renderizarTabelaPrincipal();">' + (item.valorUnitario || '0,00') + '</div></td>' +
+                '<td class="col-valor" style="font-weight: 600; color: #0f172a;">R$ ' + totalFormatado + '</td>' +
+                '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'conferente\', this.innerText)">' + (item.conferente || '') + '</div></td>' +
+                '<td><span class="status-badge status-recebido">RECEBIDO</span></td>' +
+                '<td class="actions-cell">' +
+                    '<button class="btn-success" title="Adicionar outro item nesta nota" style="padding: 6px 10px; font-size: 12px; margin-right: 4px;" onmousedown="event.preventDefault()" onclick="adicionarItemNaNota(\'' + item.idDoc + '\', this)">➕</button>' +
+                    '<button class="btn-danger" style="padding: 6px 10px; font-size: 12px;" onclick="excluirNota(\'' + item.idDoc + '\')">🗑️</button>' +
+                '</td>';
+            if (multi) tr.className = 'grupo-multi';
+            return tr;
+    }
+
+    function criarLinhaTotalNota(grupo, soma) {
+        var tr = document.createElement('tr');
+        tr.className = 'linha-total-nota';
+        var tdRotulo = document.createElement('td');
+        tdRotulo.colSpan = 7;
+        tdRotulo.className = 'rotulo-total';
+        tdRotulo.textContent = 'Total da nota ' + (grupo[0].numeroNota || '') + ' (' + grupo.length + ' itens)';
+        var tdValor = document.createElement('td');
+        tdValor.className = 'col-valor';
+        tdValor.textContent = 'R$ ' + soma.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+        var tdResto = document.createElement('td');
+        tdResto.colSpan = 3;
+        tr.appendChild(tdRotulo); tr.appendChild(tdValor); tr.appendChild(tdResto);
+        return tr;
+    }
+
+    // Novo item na mesma nota: já copia nº da nota, fornecedor, data e conferente
+    function adicionarItemNaNota(idDocOrigem, botao) {
+        var origem = dadosNotas.find(function(i) { return i.idDoc === idDocOrigem; });
+        if (!origem) return;
+        var dados = {
+            numeroNota: origem.numeroNota || "",
+            fornecedor: origem.fornecedor || "",
+            dataRecebimento: origem.dataRecebimento || "",
+            conferente: origem.conferente || ""
+        };
+        // Usa o que está na tela (mesmo que ainda não tenha sido salvo, por exemplo o número da nota recém-digitado)
+        var tr = botao && botao.closest ? botao.closest('tr') : null;
+        var cels = tr ? celulasEditaveis(tr) : [];
+        if (cels.length >= 7) {
+            dados.numeroNota = formatarNumeroNota(cels[0].innerText);
+            dados.fornecedor = cels[1].innerText.trim();
+            dados.dataRecebimento = expandirData(cels[3].innerText);
+            dados.conferente = cels[6].innerText.trim();
+        }
+        if (!dados.numeroNota) {
+            alert("Preencha o número da nota antes de adicionar outro item a ela.");
+            return;
+        }
+        var novo = {
+            numeroNota: dados.numeroNota,
+            fornecedor: dados.fornecedor,
+            item: "",
+            dataRecebimento: dados.dataRecebimento,
+            qtdRecebida: "1",
+            valorUnitario: "0,00",
+            conferente: dados.conferente
+        };
+        if (usandoFirebase) {
+            var ref = db.collection("notas_recebidas_almoxarifado").doc();
+            focoPendente = { id: ref.id, idx: 2 };   // cursor já no campo "Item / Produto"
+            ref.set(Object.assign({}, novo, { criadoEm: firebase.firestore.FieldValue.serverTimestamp() }));
+        } else {
+            novo.idDoc = 'local_' + Date.now();
+            novo.criadoEm = new Date().toISOString();
+            focoPendente = { id: novo.idDoc, idx: 2 };
+            dadosNotas.unshift(novo);
+            salvarDadosLocais();
+            renderizarTabelaPrincipal();
+            atualizarDashboard();
+            renderizarRelatorio();
+            atualizarSelectFornecedoresRelatorio();
+        }
+        setTimeout(function() { focoPendente = null; }, 4000);
     }
 
     function desenharTabelaPrincipal() {
@@ -901,26 +1051,14 @@
             return;
         }
 
-        filtrados.forEach(function(item) {
-            var totalCalc = calcularTotal(item.qtdRecebida, item.valorUnitario);
-            var totalFormatado = parseFloat(totalCalc).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
-            
-            var tr = document.createElement('tr');
-            tr.innerHTML = 
-                '<td class="checkbox-cell"><input type="checkbox" class="check-principal" value="' + item.idDoc + '"></td>' +
-                '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'numeroNota\', this.innerText); renderizarTabelaPrincipal();">' + (item.numeroNota || '') + '</div></td>' +
-                '<td class="col-fornecedor"><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'fornecedor\', this.innerText)">' + (item.fornecedor || '') + '</div></td>' +
-                '<td class="col-item"><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'item\', this.innerText)">' + (item.item || '') + '</div></td>' +
-                '<td class="col-data"><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'dataRecebimento\', this.innerText)">' + abreviarData(item.dataRecebimento || '') + '</div></td>' +
-                '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'qtdRecebida\', this.innerText); renderizarTabelaPrincipal();">' + (item.qtdRecebida || '') + '</div></td>' +
-                '<td class="col-valor-unit"><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'valorUnitario\', this.innerText); renderizarTabelaPrincipal();">' + (item.valorUnitario || '0,00') + '</div></td>' +
-                '<td class="col-valor" style="font-weight: 600; color: #0f172a;">R$ ' + totalFormatado + '</td>' +
-                '<td><div contenteditable="true" onblur="atualizarCampo(\'' + item.idDoc + '\', \'conferente\', this.innerText)">' + (item.conferente || '') + '</div></td>' +
-                '<td><span class="status-badge status-recebido">RECEBIDO</span></td>' +
-                '<td class="actions-cell">' +
-                    '<button class="btn-danger" style="padding: 6px 10px; font-size: 12px;" onclick="excluirNota(\'' + item.idDoc + '\')">🗑️</button>' +
-                '</td>';
-            tbody.appendChild(tr);
+        agruparPorNota(filtrados).forEach(function(grupo) {
+            var multi = grupo.length > 1;
+            var somaNota = 0;
+            grupo.forEach(function(item) {
+                tbody.appendChild(criarLinhaPrincipal(item, multi));
+                somaNota += parseFloat(calcularTotal(item.qtdRecebida, item.valorUnitario)) || 0;
+            });
+            if (multi) tbody.appendChild(criarLinhaTotalNota(grupo, somaNota));
         });
     }
 
@@ -929,7 +1067,17 @@
         var elValor = document.getElementById('statValorTotal');
         var elForn = document.getElementById('statFornecedores');
 
-        if (elTotal) elTotal.innerText = dadosNotas.length;
+        if (elTotal) {
+            var notasDistintas = {};
+            dadosNotas.forEach(function(item) { notasDistintas[item.numeroNota ? 'n_' + item.numeroNota : 'id_' + item.idDoc] = true; });
+            elTotal.innerText = Object.keys(notasDistintas).length;
+            if (dadosNotas.length !== Object.keys(notasDistintas).length) {
+                var sub = document.createElement('span');
+                sub.style.cssText = 'font-size: 14px; font-weight: 600; color: #64748b; margin-left: 8px;';
+                sub.textContent = '(' + dadosNotas.length + ' itens)';
+                elTotal.appendChild(sub);
+            }
+        }
         
         var somaGeral = 0;
         dadosNotas.forEach(function(item) {
